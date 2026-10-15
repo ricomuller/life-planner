@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Life & Study Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* ---------- DESIGN SYSTEM & DESIGN-TRENNUNG ---------- */
+:root {
+  --bg:#eef1f5; --grid:rgba(47,91,211,.06); --surface:#ffffff; --ink:#17202b; --muted:#5b6677; --line:#d6dce4;
+  --accent:#2f5bd3; --accent-ink:#ffffff; --soft:#e4eaf7;
+  --ok:#1f8a5b; --warn:#b7791f; --bad:#c2413b;
+  --s-en:#5f6e84; --heat0:#e3e8ef; --uni:#dfe4ec; --uni2:#eef1f5; --own:#8a5a12;
+  --f-display:"Archivo",system-ui,sans-serif; --f-body:"Source Sans 3",system-ui,sans-serif; --f-mono:"JetBrains Mono",ui-monospace,monospace;
+}
+
+/* Privatleben-Modus: Warme Erd- & Sandtöne */
+body.life-mode {
+  --bg:#fdfbf7; --grid:rgba(217,119,6,.05); --surface:#ffffff; --ink:#2c221e; --muted:#7c6a5e; --line:#ebe2d8;
+  --accent:#d97706; --accent-ink:#ffffff; --soft:#fef3c7;
+  --ok:#16a34a; --warn:#d97706; --bad:#dc2626;
+}
+
+@media (prefers-color-scheme:dark) {
+  :root:not([data-theme="light"]) {
+    --bg:#0e131a; --grid:rgba(124,156,255,.05); --surface:#161d27; --ink:#e5eaf1; --muted:#95a1b3; --line:#2a3441;
+    --accent:#7c9cff; --accent-ink:#0e131a; --soft:#1e2940;
+    --ok:#4cc38a; --warn:#e0a84a; --bad:#f07a73;
+    --s-en:#9aa8bd; --heat0:#1e2631; --uni:#232c38; --uni2:#1b232d; --own:#e0b060; color-scheme:dark;
+  }
+  body.life-mode:not([data-theme="light"]) {
+    --bg:#1a1410; --grid:rgba(245,158,11,.05); --surface:#241c17; --ink:#f3eae1; --muted:#a89280; --line:#3a2e26;
+    --accent:#f59e0b; --accent-ink:#1a1410; --soft:#3d2c1d; color-scheme:dark;
+  }
+}
+
+* { box-sizing:border-box; }
+body { background-color:var(--bg); background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px); background-size:24px 24px; color:var(--ink); font:16px/1.5 var(--f-body); transition:background-color .3s ease, color .3s ease; }
+.wrap { max-width:1080px; margin:0 auto; padding:20px 16px 72px; }
+h1,h2,h3 { font-family:var(--f-display); font-stretch:85%; line-height:1.15; margin:0; text-wrap:balance; }
+h1 { font-size:1.9rem; font-weight:800; }
+h2 { font-size:1.25rem; font-weight:700; }
+h3 { font-size:1rem; font-weight:700; }
+.mono { font-family:var(--f-mono); font-variant-numeric:tabular-nums; }
+.muted { color:var(--muted); }
+.small { font-size:.875rem; }
+.label { font-size:.75rem; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:600; }
+
+header.top { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; margin-bottom:20px; }
+.brand { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.brand b { font-family:var(--f-display); font-weight:800; font-size:1.35rem; }
+.mode-badge { font-size:.75rem; font-weight:700; padding:2px 9px; border-radius:12px; background:var(--soft); color:var(--accent); text-transform:uppercase; letter-spacing:.05em; }
+
+.tabs { display:flex; flex-wrap:wrap; gap:2px; background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:3px; }
+.tabs button { border:0; background:none; color:var(--muted); font:600 .9rem var(--f-body); padding:6px 11px; border-radius:6px; cursor:pointer; }
+.tabs button[aria-selected="true"] { background:var(--accent); color:var(--accent-ink); }
+
+button { font:inherit; color:inherit; }
+.btn { display:inline-flex; align-items:center; gap:6px; border:1px solid var(--line); background:var(--surface); border-radius:7px; padding:6px 12px; font-weight:600; font-size:.9rem; cursor:pointer; white-space:nowrap; }
+.btn:hover { border-color:var(--accent); }
+.btn.primary { background:var(--accent); border-color:var(--accent); color:var(--accent-ink); }
+.btn.ghost { background:none; border-color:transparent; color:var(--muted); }
+.btn.ghost:hover { color:var(--ink); }
+.btn.danger { color:var(--bad); }
+
+.stack { display:flex; flex-direction:column; gap:16px; }
+.row { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+.between { justify-content:space-between; }
+.grow { flex:1; min-width:0; }
+.card { background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:16px; min-width:0; }
+.grid2 { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:16px; }
+.chip { display:inline-flex; align-items:center; gap:6px; font-size:.8rem; font-weight:600; padding:2px 9px; border-radius:99px; background:var(--soft); white-space:nowrap; }
+.dot { width:9px; height:9px; border-radius:50%; background:var(--c,var(--accent)); flex:none; }
+.pill-ok { color:var(--ok); } .pill-bad { color:var(--bad); } .pill-warn { color:var(--warn); }
+
+.hero { display:grid; grid-template-columns:1fr auto; gap:16px; align-items:end; }
+@media (max-width:620px){ .hero { grid-template-columns:1fr; } }
+.count { display:flex; gap:18px; flex-wrap:wrap; }
+.count div { display:flex; flex-direction:column; }
+.count .big { font-family:var(--f-mono); font-size:1.6rem; font-weight:600; line-height:1.1; }
+
+.block { position:relative; background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:16px 16px 16px 20px; display:flex; flex-direction:column; gap:10px; overflow:hidden; }
+.block::before { content:""; position:absolute; left:0; top:0; bottom:0; width:5px; background:var(--c,var(--accent)); }
+.block.done { border-color:color-mix(in srgb,var(--ok) 45%,var(--line)); }
+
+.timer { display:flex; align-items:center; gap:14px; flex-wrap:wrap; background:var(--soft); border-radius:8px; padding:10px 12px; }
+.timer .clock { font-family:var(--f-mono); font-size:1.7rem; font-weight:600; }
+.bar { height:8px; border-radius:99px; background:var(--heat0); overflow:hidden; }
+.bar>i { display:block; height:100%; background:var(--c,var(--accent)); border-radius:99px; }
+
+.list { display:flex; flex-direction:column; }
+.list>div { display:flex; align-items:center; gap:10px; padding:8px 0; border-top:1px solid var(--line); }
+.list>div:first-child { border-top:0; }
+
+input[type=text],input[type=number],input[type=date],input[type=time],select,textarea { font:inherit; color:var(--ink); background:var(--bg); border:1px solid var(--line); border-radius:7px; padding:6px 10px; min-width:0; }
+textarea { resize:vertical; min-height:64px; width:100%; padding:8px 10px; }
+input[type=checkbox] { width:18px; height:18px; accent-color:var(--accent); }
+
+.overlay { position:fixed; inset:0; background:rgba(10,14,20,.45); display:flex; align-items:center; justify-content:center; padding:16px; z-index:10; }
+.dialog { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:20px; width:min(480px,100%); max-height:calc(100dvh - 32px); overflow-y:auto; display:flex; flex-direction:column; gap:12px; }
+.dialog label,.logform label { display:flex; flex-direction:column; gap:4px; font-weight:600; font-size:.9rem; min-width:0; }
+.dialog .two { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.dialog .three { display:grid; grid-template-columns:1.4fr 1fr 1fr; gap:10px; }
+
+.toast { position:fixed; left:50%; bottom:calc(20px + env(safe-area-inset-bottom,0px)); transform:translateX(-50%); background:var(--ink); color:var(--bg); padding:8px 14px; border-radius:8px; font-weight:600; font-size:.9rem; z-index:20; }
+.xbtn { border:0; background:none; color:var(--muted); cursor:pointer; font-size:1.1rem; line-height:1; padding:4px 6px; border-radius:5px; }
+.xbtn:hover { color:var(--bad); }
+
+/* Kalender */
+.calwrap { background:var(--surface); border:1px solid var(--line); border-radius:10px; overflow-x:auto; }
+.cal { display:grid; grid-template-columns:48px repeat(7,minmax(104px,1fr)); min-width:780px; }
+.cal .hd { border-bottom:1px solid var(--line); border-right:1px solid var(--line); padding:8px 6px; min-width:0; display:flex; flex-direction:column; gap:2px; }
+.cal .gut { position:relative; border-right:1px solid var(--line); }
+.cal .gut span { position:absolute; right:6px; transform:translateY(-50%); font:.68rem var(--f-mono); color:var(--muted); }
+.daycol { position:relative; border-right:1px solid var(--line); background-image:repeating-linear-gradient(to bottom,var(--line) 0 1px,transparent 1px 48px); cursor:copy; }
+.ev { position:absolute; border-radius:6px; padding:3px 6px; font-size:.72rem; line-height:1.25; overflow:hidden; min-width:0; }
+.ev.learn { background:color-mix(in srgb,var(--c) 16%,var(--surface)); border:1px solid color-mix(in srgb,var(--c) 55%,var(--line)); border-left:4px solid var(--c); color:var(--ink); cursor:grab; z-index:2; }
+.ev.own { background:color-mix(in srgb,var(--own) 16%,var(--surface)); border:1px solid color-mix(in srgb,var(--own) 50%,var(--line)); border-left:4px solid var(--own); color:var(--ink); cursor:pointer; z-index:2; }
+
+/* Item Row (Einkauf/Haushalt) */
+.item-row { display:flex; align-items:center; gap:12px; padding:10px 0; border-top:1px solid var(--line); }
+.item-row:first-child { border-top:0; }
+.item-row.done span { text-decoration:line-through; color:var(--muted); }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <b id="app-title">Lernstand</b>
+      <span id="mode-badge" class="mode-badge">Arbeitsbereich</span>
+    </div>
+    <nav class="tabs" id="tabs" role="tablist"></nav>
+  </header>
+
+  <main id="app"></main>
+</div>
+<div id="layer"></div>
+
+<script>
+/* ---------- ZEIT & HELFER ---------- */
+const pad = n => String(n).padStart(2,'0');
+const key = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parse = k => { const [y,m,d] = k.split('-').map(Number); return new Date(y,m-1,d); };
+const addDays = (d,n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
+const diff = (a,b) => Math.round((parse(b)-parse(a))/864e5);
+const dow = d => (d.getDay()+6)%7;
+const mondayOf = d => addDays(new Date(d.getFullYear(),d.getMonth(),d.getDate()),-dow(d));
+const toMin = t => { const [h,m] = String(t).split(':').map(Number); return h*60+(m||0); };
+const hm = m => pad(Math.floor(m/60))+':'+pad(m%60);
+const DAYS = ['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag'];
+const DS = ['Mo','Di','Mi','Do','Fr','Sa','So'];
+const MON = ['Jan','Feb','März','Apr','Mai','Juni','Juli','Aug','Sep','Okt','Nov','Dez'];
+const fmtShort = k => { const d=parse(k); return `${d.getDate()}. ${MON[d.getMonth()]}`; };
+const fmtLong = k => { const d=parse(k); return `${DAYS[dow(d)]}, ${d.getDate()}. ${MON[d.getMonth()]}`; };
+const todayKey = () => key(new Date());
+const fmtH = min => (min/60).toLocaleString('de-DE',{maximumFractionDigits:1})+' h';
+const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ---------- TABS CONFIGURE ---------- */
+const TABS = [
+  { id: 'heute', label: 'Heute', mode: 'work' },
+  { id: 'kalender', label: 'Kalender', mode: 'work' },
+  { id: 'woche', label: 'Woche', mode: 'work' },
+  { id: 'faecher', label: 'Fächer', mode: 'work' },
+  { id: 'todos', label: 'To-dos', mode: 'work' },
+  { id: 'protokoll', label: 'Protokoll', mode: 'work' },
+  { id: 'einkauf', label: '🛒 Einkauf', mode: 'life' },
+  { id: 'haushalt', label: '🧹 Haushalt', mode: 'life' }
+];
+
+/* ---------- ZUSTAND ---------- */
+const ls = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k,v) { try { v==null?localStorage.removeItem(k):localStorage.setItem(k,v); } catch {} }
+};
+
+const S = {
+  tab: ls.get('lt-tab') || 'heute',
+  subjects: {}, std: {}, ov: {}, ovBy: {}, sessions: [], todos: [], own: {},
+  shopping: [], chores: [],
+  timer: (() => { try { return JSON.parse(ls.get('lt-timer')); } catch { return null; } })(),
+  dialog: null, db: null
+};
+
+let SUBJECTS = [
+  { id: 'mathe', name: 'Höhere Mathematik', short: 'Mathe', color: 0 },
+  { id: 'physik', name: 'Physik', short: 'Physik', color: 1 }
+];
+let SUB = Object.fromEntries(SUBJECTS.map(s => [s.id, s]));
+
+function toast(msg) {
+  const l = document.getElementById('layer');
+  const t = document.createElement('div');
+  t.className = 'toast'; t.textContent = msg;
+  l.appendChild(t); setTimeout(() => t.remove(), 2600);
+}
+
+/* ---------- RENDER MAIN ---------- */
+function render() {
+  const curTab = TABS.find(t => t.id === S.tab) || TABS[0];
+
+  // Visueller Modus-Wechsel
+  if (curTab.mode === 'life') {
+    document.body.classList.add('life-mode');
+    document.getElementById('mode-badge').textContent = 'Privatleben';
+    document.getElementById('app-title').textContent = 'Life Organizer';
+  } else {
+    document.body.classList.remove('life-mode');
+    document.getElementById('mode-badge').textContent = 'Arbeitsbereich';
+    document.getElementById('app-title').textContent = 'Lernstand';
+  }
+
+  // Tabs Rendern
+  document.getElementById('tabs').innerHTML = TABS.map(t =>
+    `<button role="tab" aria-selected="${t.id === S.tab}" data-tab="${t.id}">${t.label}</button>`
+  ).join('');
+
+  // Main View
+  const app = document.getElementById('app');
+  if (S.tab === 'einkauf') app.innerHTML = viewEinkauf();
+  else if (S.tab === 'haushalt') app.innerHTML = viewHaushalt();
+  else if (S.tab === 'kalender') app.innerHTML = viewKalender();
+  else if (S.tab === 'todos') app.innerHTML = viewTodos();
+  else if (S.tab === 'protokoll') app.innerHTML = viewProtokoll();
+  else if (S.tab === 'faecher') app.innerHTML = viewFaecher();
+  else if (S.tab === 'woche') app.innerHTML = viewWoche();
+  else app.innerHTML = viewHeute();
+}
+
+/* ---------- ANSICHTEN ---------- */
+
+function viewHeute() {
+  const k = todayKey();
+  return `<div class="stack">
+    <section class="hero">
+      <div><span class="label">Heute</span><h1>${fmtLong(k)}</h1></div>
+    </section>
+    <section class="card stack">
+      <div class="row between"><h3>Heutige Aufgaben & Sessions</h3><button class="btn primary" data-act="start-free">+ Lernsession starten</button></div>
+      <p class="muted">Starte eine Timer-Session oder plane Blöcke im Kalender.</p>
+    </section>
+  </div>`;
+}
+
+function viewEinkauf() {
+  const open = S.shopping.filter(i => !i.done);
+  const done = S.shopping.filter(i => i.done);
+
+  return `<div class="stack">
+    <div><span class="label">Privatleben</span><h1>Einkaufsliste</h1></div>
+    <form class="card row" data-form="shop">
+      <input type="text" id="shop-text" class="grow" placeholder="Artikel (z. B. Milch, Schrauben M6)..." required>
+      <select id="shop-cat">
+        <option value="Supermarkt">Supermarkt</option>
+        <option value="Baumarkt">Baumarkt/Technik</option>
+        <option value="Drogerie">Drogerie</option>
+      </select>
+      <button class="btn primary" type="submit">Hinzufügen</button>
+    </form>
+    <section class="card stack">
+      <h3>Offen (${open.length})</h3>
+      <div class="list">
+        ${open.map(i => `
+          <div class="item-row">
+            <input type="checkbox" data-act="shop-toggle" data-id="${i.id}">
+            <span class="grow">${esc(i.text)}</span>
+            <span class="chip">${esc(i.cat||'Allgemein')}</span>
+            <button class="xbtn" data-act="shop-del" data-id="${i.id}">×</button>
+          </div>
+        `).join('') || '<p class="muted small">Einkaufsliste ist leer.</p>'}
+      </div>
+    </section>
+    ${done.length ? `<section class="card stack">
+      <div class="row between"><h3>Erledigt (${done.length})</h3><button class="btn ghost small" data-act="shop-clear">Erledigte löschen</button></div>
+      <div class="list">
+        ${done.map(i => `
+          <div class="item-row done">
+            <input type="checkbox" checked data-act="shop-toggle" data-id="${i.id}">
+            <span class="grow">${esc(i.text)}</span>
+            <span class="chip">${esc(i.cat||'Allgemein')}</span>
+            <button class="xbtn" data-act="shop-del" data-id="${i.id}">×</button>
+          </div>
+        `).join('')}
+      </div>
+    </section>` : ''}
+  </div>`;
+}
+
+function viewHaushalt() {
+  return `<div class="stack">
+    <div><span class="label">Privatleben</span><h1>Haushaltsplaner</h1></div>
+    <form class="card row" data-form="chore">
+      <input type="text" id="chore-name" class="grow" placeholder="Aufgabe (z. B. Bettwäsche waschen, Filter reinigen)..." required>
+      <select id="chore-freq">
+        <option value="7">Wöchentlich</option>
+        <option value="14">Alle 2 Wochen</option>
+        <option value="30">Monatlich</option>
+      </select>
+      <button class="btn primary" type="submit">Aufgabe anlegen</button>
+    </form>
+    <section class="card stack">
+      <h3>Haushaltsaufgaben</h3>
+      <div class="list">
+        ${S.chores.map(c => `
+          <div class="item-row">
+            <button class="btn small" data-act="chore-done" data-id="${c.id}">✓ Erledigt</button>
+            <div class="grow">
+              <b>${esc(c.name)}</b><br>
+              <span class="muted small">Turnus: alle ${c.freq} Tage \vert{} Zuletzt:${c.lastDone ? fmtShort(c.lastDone) : 'Noch nie'}</span>
+            </div>
+            <button class="xbtn" data-act="chore-del" data-id="${c.id}">×</button>
+          </div>
+        `).join('') || '<p class="muted small">Keine Haushaltsaufgaben angelegt.</p>'}
+      </div>
+    </section>
+  </div>`;
+}
+
+function viewKalender() {
+  return `<div class="stack">
+    <div><span class="label">Wochenübersicht</span><h1>Kalender</h1></div>
+    <div class="card"><p class="muted">Interaktiver Kalender synchronisiert mit Google Calendar & Stundenplan.</p></div>
+  </div>`;
+}
+
+function viewTodos() {
+  return `<div class="stack">
+    <div><span class="label">Aufgaben</span><h1>To-dos</h1></div>
+    <div class="card"><p class="muted">Hier werden offene To-dos angezeigt.</p></div>
+  </div>`;
+}
+
+function viewProtokoll() {
+  return `<div class="stack">
+    <div><span class="label">Verlauf</span><h1>Protokoll</h1></div>
+    <div class="card"><p class="muted">Übersicht aller absolvierten Lernsessions.</p></div>
+  </div>`;
+}
+
+function viewFaecher() {
+  return `<div class="stack">
+    <div><span class="label">Übersicht</span><h1>Fächer</h1></div>
+    <div class="card"><p class="muted">Verwaltung deiner Studiengang-Module.</p></div>
+  </div>`;
+}
+
+function viewWoche() {
+  return `<div class="stack">
+    <div><span class="label">Planung</span><h1>Wochenansicht</h1></div>
+    <div class="card"><p class="muted">Wochenziele & Rückblick.</p></div>
+  </div>`;
+}
+
+/* ---------- EVENTS & INTERAKTION ---------- */
+document.addEventListener('click', e => {
+  const tab = e.target.closest('[data-tab]');
+  if (tab) {
+    S.tab = tab.dataset.tab;
+    ls.set('lt-tab', S.tab);
+    render();
+    return;
+  }
+
+  const a = e.target.closest('[data-act]');
+  if (!a) return;
+  const act = a.dataset.act;
+
+  if (act === 'shop-toggle') {
+    const item = S.shopping.find(i => i.id === a.dataset.id);
+    if (item) { item.done = !item.done; saveShopping(item); }
+  }
+  if (act === 'shop-del') {
+    delShopping(a.dataset.id);
+  }
+  if (act === 'shop-clear') {
+    S.shopping.filter(i => i.done).forEach(i => delShopping(i.id));
+  }
+  if (act === 'chore-done') {
+    const c = S.chores.find(i => i.id === a.dataset.id);
+    if (c) { c.lastDone = todayKey(); saveChore(c); }
+  }
+  if (act === 'chore-del') {
+    delChore(a.dataset.id);
+  }
+});
+
+document.addEventListener('submit', e => {
+  const f = e.target.closest('[data-form]');
+  if (!f) return;
+  e.preventDefault();
+
+  if (f.dataset.form === 'shop') {
+    const txt = document.getElementById('shop-text').value.trim();
+    const cat = document.getElementById('shop-cat').value;
+    if (txt) {
+      saveShopping({ id: 's'+Date.now(), text: txt, cat, done: false });
+      document.getElementById('shop-text').value = '';
+    }
+  }
+  if (f.dataset.form === 'chore') {
+    const name = document.getElementById('chore-name').value.trim();
+    const freq = document.getElementById('chore-freq').value;
+    if (name) {
+      saveChore({ id: 'c'+Date.now(), name, freq, lastDone: null });
+      document.getElementById('chore-name').value = '';
+    }
+  }
+});
+
+/* ---------- FIRESTORE HELPERS ---------- */
+async function saveShopping(item) {
+  if (!S.db) {
+    const idx = S.shopping.findIndex(i => i.id === item.id);
+    if (idx < 0) S.shopping.push(item); else S.shopping[idx] = item;
+    render(); return;
+  }
+  try { await S.db.collection('shopping').doc(item.id).set(item); } catch(e) { console.error(e); }
+}
+async function delShopping(id) {
+  if (!S.db) { S.shopping = S.shopping.filter(i => i.id !== id); render(); return; }
+  try { await S.db.collection('shopping').doc(id).delete(); } catch(e) { console.error(e); }
+}
+async function saveChore(c) {
+  if (!S.db) {
+    const idx = S.chores.findIndex(i => i.id === c.id);
+    if (idx < 0) S.chores.push(c); else S.chores[idx] = c;
+    render(); return;
+  }
+  try { await S.db.collection('chores').doc(c.id).set(c); } catch(e) { console.error(e); }
+}
+async function delChore(id) {
+  if (!S.db) { S.chores = S.chores.filter(i => i.id !== id); render(); return; }
+  try { await S.db.collection('chores').doc(id).delete(); } catch(e) { console.error(e); }
+}
+
+render();
+</script>
+
+<!-- ---------- FIREBASE INTEGRATION ---------- -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+
+<script>
+  // Konfiguration aus deinem Firebase-Projekt
+  const firebaseConfig = {
+    apiKey: "AIzaSyA3XVpp98gA-_90kSYHrZLbUDUjcJAdH6E",
+    authDomain: "mein-live-planner.firebaseapp.com",
+    projectId: "mein-live-planner",
+    storageBucket: "mein-live-planner.firebasestorage.app",
+    messagingSenderId: "739230580874",
+    appId: "1:739230580874:web:01b32e3cc3d615ea23ed73"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  S.db = firebase.firestore();
+
+  // Automatischer Login bei Seitenaufruf
+  firebase.auth().onAuthStateChanged((user) => {
+    if (!user) {
+      // WICHTIG: Ersetze hier "DEINE_EMAIL@beispiel.de" und "DEIN_PASSWORT" mit den Daten aus Schritt 1!
+      firebase.auth().signInWithEmailAndPassword("ricom8474@gmail.com", "Acdc1111!!")
+        .then(() => console.log("Login erfolgreich, Firestore verbunden!"))
+        .catch(err => console.error("Login-Fehler:", err));
+    }
+  });
+
+  // Echtzeit-Synchronisation aller Sammlungen
+  S.db.collection('shopping').onSnapshot(snap => {
+    S.shopping = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    render();
+  });
+  S.db.collection('chores').onSnapshot(snap => {
+    S.chores = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    render();
+  });
+  S.db.collection('todos').onSnapshot(snap => {
+    S.todos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    render();
+  });
+  S.db.collection('sessions').onSnapshot(snap => {
+    S.sessions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    render();
+  });
+</script>
+</body>
+</html>
