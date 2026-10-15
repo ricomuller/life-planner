@@ -140,7 +140,7 @@ input[type=checkbox]{width:20px;height:20px;accent-color:var(--accent); cursor:p
 .ev.learn.skipped{opacity:.55;background:var(--surface)}
 .ev.learn.skipped b{text-decoration:line-through}
 
-/* ---------- RESPONSIVE ANPASSUNGEN (Mobile/Tablet) ---------- */
+/* ---------- RESPONSIVE ANPASSUNGEN ---------- */
 @media (max-width: 768px) {
   .wrap { padding: 12px 10px 80px; }
   .hero { grid-template-columns: 1fr; gap: 12px; }
@@ -321,7 +321,7 @@ function stopTimer(){
 }
 function timerBarHTML(){
   const t=S.timer; if(!t)return ''; const i=timerInfo(), b=t.blockId?findBlock(t.blockId):null;
-  if(S.tab==='heute' && b && b.date===todayKey()) return ''; // In Karte zeigen
+  if(S.tab==='heute' && b && b.date===todayKey()) return '';
   return `<div class="timerbar" style="--c:var(--s-${t.subject||defSub()})">
     <span class="grow"><b>Timer läuft</b> ${chip(t.subject)} <span class="small muted">${b?b.time:'Freie Session'}</span></span>
     <span class="clock" id="clock">${pad(Math.floor(i.left/60))}:${pad(i.left%60)}</span>
@@ -339,6 +339,25 @@ const chip=id=>SUB[id]?`<span class="chip" style="--c:var(--s-${id})"><span clas
 function viewHeute(){
   const k=todayKey(),blocks=blocksFor(k),mon=mondayOf(new Date()),ws=weekStats(mon);
   const pct=Math.min(100,ws.planned?ws.got/ws.planned*100:0);
+  
+  let blocksHTML = '<div class="card muted">Für heute ist kein Lernblock geplant.</div>';
+  if(blocks.length > 0) {
+    blocksHTML = blocks.map(b=>{
+      const st=statusOf(b), t=S.timer&&S.timer.blockId===b.id?timerInfo():null;
+      let acts = '';
+      if(st) acts = `<span class="pill-ok">✓ Erledigt (${st.minutes} min)</span>`;
+      else if(t) acts = `<button class="btn primary" data-act="stop">Beenden</button>`;
+      else acts = `<button class="btn primary" data-act="timer" data-block="${b.id}" data-subj="${b.subjects[0]||defSub()}">Timer starten</button><button class="btn ghost" data-act="skip" data-block="${b.id}">Ausgefallen</button>`;
+      
+      return `<div class="block ${st?'done':''}" style="--c:var(--s-${b.subjects[0]||'en'})">
+        <div class="row between"><span class="time">${esc(b.time)}</span>${b.subjects.map(chip).join('')}</div>
+        <h3>${esc(b.subjects.map(s=>SUB[s]?.name||s).join(' / '))}</h3>
+        ${t?`<div class="timer"><span class="clock" id="clock">${pad(Math.floor(t.left/60))}:${pad(t.left%60)}</span><b class="grow">${t.focus?'Fokus':'Pause'}</b></div>`:''}
+        <div class="row">${acts}</div>
+      </div>`;
+    }).join('');
+  }
+
   return `<div class="stack">
     <section class="hero">
       <div class="stack" style="gap:6px"><span class="label">Heute</span><h1>${fmtLong(k)}</h1></div>
@@ -349,15 +368,7 @@ function viewHeute(){
     <div class="bar"><i style="width:${pct}%"></i></div>
     <section class="stack">
       <div class="row between"><h2>Heute lernen</h2><button class="btn primary" data-act="start-free">+ Lernsession starten</button></div>
-      ${blocks.length?blocks.map(b=>{
-        const st=statusOf(b), t=S.timer&&S.timer.blockId===b.id?timerInfo():null;
-        const acts = st ? `<span class="pill-ok">✓ Erledigt (${st.minutes} min)</span>` : t ? `<button class="btn primary" data-act="stop">Beenden</button>` : `<button class="btn primary" data-act="timer" data-block="${b.id}" data-subj="${b.subjects[0]||defSub()}">Timer starten</button><button class="btn ghost" data-act="skip" data-block="${b.id}">Ausgefallen</button>`;
-        return `<div class="block ${st?'done':''}" style="--c:var(--s-${b.subjects[0]||'en'})">
-          <div class="row between"><span class="time">${esc(b.time)}</span>${b.subjects.map(chip).join('')}</div>
-          <h3>${esc(b.subjects.map(s=>SUB[s]?.name\vert{}\vert{}s).join(' / '))}</h3>${t?`<div class="timer"><span class="clock" id="clock">${pad(Math.floor(t.left/60))}:${pad(t.left%60)}</span><b class="grow">${t.focus?'Fokus':'Pause'}</b></div>`:''}
-          <div class="row">${acts}</div>
-        </div>`;
-      }).join(''):`<div class="card muted">Für heute ist kein Lernblock geplant.</div>`}
+      ${blocksHTML}
     </section>
   </div>`;
 }
@@ -398,7 +409,7 @@ function viewHaushalt(){
 
 function viewKalender(){
   const mon=addDays(mondayOf(new Date()),S.weekOff*7),sun=addDays(mon,6),ws=weekStats(mon),tk=todayKey();
-  const pct=Math.min(100,ws.planned?ws.got/ws.planned*100:0),H=15*15*0.8; // Skalierung für Kalender
+  const pct=Math.min(100,ws.planned?ws.got/ws.planned*100:0),H=15*15*0.8;
   let head='<div class="hd"></div>',cols='';
   let gut=`<div class="gut" style="height:${H}px">`;for(let h=8;h<22;h++)gut+=`<span style="top:${(h*60-420)*0.8}px">${pad(h)}</span>`;gut+='</div>';
   for(let i=0;i<7;i++){
@@ -555,7 +566,6 @@ document.addEventListener('click', e => {
   if (act === 'chore-done') { const c = S.chores.find(x=>x.id===a.dataset.id); if (c) saveChore({...c, lastDone: todayKey()}); }
   if (act === 'chore-del') { delChore(a.dataset.id); }
   
-  // Logout
   if (act === 'logout') { firebase.auth().signOut().then(()=>{ window.location.reload(); }); }
 });
 
@@ -584,7 +594,7 @@ document.addEventListener('submit', e => {
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 
 <script>
-  // 1. Dein kopiertes firebaseConfig aus der Firebase-Konsole hier einfügen:
+  // 1. Dein Firebase-Konfigurationsblock:
   const firebaseConfig = {
     apiKey: "AIzaSyA3XVpp98gA-_90kSYHrZLbUDUjcJAdH6E",
     authDomain: "mein-live-planner.firebaseapp.com",
