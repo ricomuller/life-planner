@@ -1386,7 +1386,7 @@ document.addEventListener('click',e=>{
     if(act==='go-review')setTimeout(()=>document.getElementById('review')?.scrollIntoView({behavior:'smooth'}),30);else window.scrollTo(0,0);return}
   if(act==='save-wg'){const mk=a.dataset.mon;saveWeek(mk,{goals:(document.getElementById('wg-'+mk)?.value||'').trim()});toast('Wochenziele gespeichert');return}
   if(act==='rate'){saveWeek(a.dataset.mon,{rating:+a.dataset.n});return}
-  if(act==='save-review'){const mk=a.dataset.mon,g=n=>document.getElementById(`rf-${n}-${mk}`)?.value||'').trim();
+  if(act==='save-review'){const mk=a.dataset.mon,g=n=>(document.getElementById(`rf-${n}-${mk}`)?.value||'').trim();
     saveWeek(mk,{stand:g('stand'),gut:g('gut'),anders:g('anders'),reviewedAt:todayKey()});toast('Rückblick gespeichert');return}
   if(act==='stop'){stopTimer();return}
   if(act==='cancel-timer'){S.timer=null;ls.set('lt-timer',null);render();return}
