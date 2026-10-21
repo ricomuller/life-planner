@@ -183,10 +183,13 @@ input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent)}
 .counts{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:12px}
 .counts label{display:flex;flex-direction:column;gap:6px;font-size:.9rem;font-weight:600;color:var(--muted)}
 .counts input{width:100%}
-.wkgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
-.wkcell{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-weight:600;font-size:.95rem;background:var(--surface)}
-.wkcell input{accent-color:var(--ok)}
-.wkcell.done{background:color-mix(in srgb,var(--ok) 14%,var(--surface));border-color:color-mix(in srgb,var(--ok) 60%,var(--line));color:var(--ok)}
+.wkgrid{display:grid;grid-template-columns:1fr;gap:10px}
+.wkcell{display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.wkcell>label{display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:600;font-size:.95rem;width:200px;flex:none}
+.wkcell input[type=checkbox]{accent-color:var(--ok)}
+.wkcell.done{background:color-mix(in srgb,var(--ok) 8%,var(--surface));border-color:color-mix(in srgb,var(--ok) 60%,var(--line))}
+.wkcell.done label{color:var(--ok)}
+.wkcell .grow{min-width:180px;font-size:.85rem;padding:6px 10px}
 .worked{color:var(--ok);font-weight:600}
 /* Vorhaben, Woche */
 .goalbox{background:color-mix(in srgb,var(--accent) 8%,var(--surface));border-left:3px solid var(--accent);border-radius:6px;padding:12px;font-size:.95rem;white-space:pre-wrap;overflow-wrap:anywhere}
@@ -308,7 +311,10 @@ fieldset.swatches input:focus-visible+span{outline:2px solid var(--accent);outli
 <div class="wrap">
   <header class="top">
     <div class="brand"><b>Lernstand</b><span class="muted small">& Alltag</span></div>
-    <nav class="tabs" role="tablist" id="tabs"></nav>
+    <div class="row">
+      <nav class="tabs" role="tablist" id="tabs"></nav>
+      <button class="btn ghost small" data-act="theme" title="Design umschalten">🌓</button>
+    </div>
   </header>
   <main id="app"></main>
 </div>
@@ -317,14 +323,14 @@ fieldset.swatches input:focus-visible+span{outline:2px solid var(--accent);outli
 <script>
 /* ---------- Echte Firebase-Datenbank ---------- */
 const firebaseConfig = {
-  apiKey: "AIzaSyA3XVpp98gA-_90kSYHrZLbUDUjcJAdH6E",
-  authDomain: "mein-live-planner.firebaseapp.com",
-  projectId: "mein-live-planner",
-  storageBucket: "mein-live-planner.firebasestorage.app",
-  messagingSenderId: "739230580874",
-  appId: "1:739230580874:web:01b32e3cc3d615ea23ed73"
+  // !!! WICHTIG: Füge hier deine Firebase-Config ein !!!
+  apiKey: "DEIN_API_KEY",
+  authDomain: "DEINE_PROJECT_ID.firebaseapp.com",
+  projectId: "DEINE_PROJECT_ID",
+  storageBucket: "DEINE_PROJECT_ID.appspot.com",
+  messagingSenderId: "DEINE_SENDER_ID",
+  appId: "DEINE_APP_ID"
 };
-
 
 if (!firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
@@ -332,6 +338,13 @@ if (!firebase.apps.length) {
 
 const auth = firebase.auth();
 const db = firebase.firestore();
+
+// Theme initialisieren
+const initTheme = () => {
+  const savedTheme = localStorage.getItem('lt-theme');
+  if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
+};
+initTheme();
 
 // Datenbank und App initialisieren
 function initDB(db) {
@@ -362,17 +375,15 @@ function initDB(db) {
 auth.onAuthStateChanged(user => {
   const layer = document.getElementById('login-layer');
   
-  // Geister-User-Schutz
   if (user && !user.email) {
     auth.signOut();
     return;
   }
 
   if (user) {
-    // Eingeloggt -> Verstecke Login-Screen
     layer.style.display = 'none';
     
-    // WICHTIGER FIX: Wartet im Hintergrund, bis das Grundgerüst der App geladen ist
+    // Wartet im Hintergrund, bis das Grundgerüst der App geladen ist
     const waitForApp = setInterval(() => {
       if (typeof S !== 'undefined') {
         clearInterval(waitForApp);
@@ -381,7 +392,6 @@ auth.onAuthStateChanged(user => {
     }, 50);
     
   } else {
-    // Nicht eingeloggt -> Zeige Login-Screen an
     layer.style.display = 'flex';
     document.getElementById('auth-btn').onclick = () => {
       const e = document.getElementById('auth-email').value;
@@ -470,8 +480,8 @@ const DAYS=['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Son
 const DS=['Mo','Di','Mi','Do','Fr','Sa','So'];
 const MON=['Jan','Feb','März','Apr','Mai','Juni','Juli','Aug','Sep','Okt','Nov','Dez'];
 const MONL=['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
-const fmtShort=k=>{const d=parse(k);return `${d.getDate()}. ${MON[d.getMonth()]}`};
-const fmtLong=k=>{const d=parse(k);return `${DAYS[dow(d)]}, ${d.getDate()}. ${MONL[d.getMonth()]}`};
+const fmtShort=k=>{const d=parse(k);return `${d.getDate()}.${MON[d.getMonth()]}`};
+const fmtLong=k=>{const d=parse(k);return `${DAYS[dow(d)]}, ${d.getDate()}.${MONL[d.getMonth()]}`};
 function isoWeek(d){const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const n=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-n);const y=new Date(Date.UTC(t.getUTCFullYear(),0,1));return Math.ceil(((t-y)/864e5+1)/7)}
 const todayKey=()=>key(new Date());
 const fmtH=min=>(min/60).toLocaleString('de-DE',{maximumFractionDigits:1})+' h';
@@ -487,7 +497,7 @@ const S={std:{},uniCancel:{},own:{},sessions:[],subjects:{},todos:[],chores:[],s
 
 /* ---------- Stundenplan ---------- */
 const uniOn=k=>S.uniBy[k]||[];
-const uniLabel=e=>e.own?e.t:`${SUB[e.sub]?.short||e.t} ${KIND_SHORT[e.k]||e.k}`;
+const uniLabel=e=>e.own?e.t:`${SUB[e.sub]?.short\vert{}\vert{}e.t}${KIND_SHORT[e.k]||e.k}`;
 /* Ausgefallene Uni-Termine: Schlüssel aus Datum, Uhrzeit und Art */
 const evKey=e=>`${e.d}_${e.s.replace(':','')}_${KIND_SHORT[e.k]||'X'}`;
 const isCancelled=e=>!!S.uniCancel[evKey(e)];
@@ -557,7 +567,7 @@ async function delSession(id){
   try{await S.db.doc('sessions/'+id).delete();toast('Eintrag gelöscht')}catch(e){toast(errMsg(e))}}
 async function saveSubject(id,patch){
   const cur=S.subjects[id]||{};
-  const next={...cur,examDate:cur.examDate||null,topics:(cur.topics||[]).map(t=>({...t})),worked:{...(cur.worked||{})},items:(cur.items||[]).map(i=>({...i})),...patch};
+  const next={...cur,examDate:cur.examDate||null,topics:(cur.topics||[]).map(t=>({...t})),worked:{...(cur.worked||{})},itemNotes:{...(cur.itemNotes||{})},items:(cur.items||[]).map(i=>({...i})),...patch};
   S.subjects={...S.subjects,[id]:next};render();
   if(S.db)try{await S.db.doc('subjects/'+id).set(next)}catch(e){toast(errMsg(e))}}
 async function saveTodo(id,data){
@@ -597,7 +607,7 @@ async function saveWeek(mon,patch){
 function suggestReplacement(b){
   const len=toMin(b.end)-toMin(b.start);let d=addDays(parse(b.date),1);
   while(dow(d)!==5||FREE_DAYS.includes(key(d))||isAwayPause(key(d)))d=addDays(d,1);
-  const k=key(d),last=blocksFor(k).filter(x=>x.slot!=='en').reduce((m,x)=>Math.max(m,toMin(x.end)),toMin('10:00'));
+  const k=key(d),last=blocksFor(k).filter(x=>x.slot!=='en').reduce((m,x),Math.max(m,toMin(x.end)),toMin('10:00'));
   let st=Math.ceil(last/15)*15;if(st+len>toMin('21:15'))st=Math.max(toMin('08:00'),toMin('21:15')-len);
   return {date:k,start:hm(st),end:hm(st+len)};
 }
@@ -610,7 +620,7 @@ function skipBlock(b){
 function openReplacement(b){
   const r=suggestReplacement(b);
   S.tab='kalender';ls.set('lt-tab','kalender');S.weekOff=weekOffOf(r.date);S.inline=null;
-  openBlock({date:r.date,start:r.start,end:r.end,subjects:b.subjects,label:`Ersatz für ${DS[dow(parse(b.date))]} ${fmtShort(b.date)}, ${b.time}`,replaces:b.id,replacesText:`${DAYS[dow(parse(b.date))]}, ${fmtShort(b.date)}, ${b.time} · ${b.subjects.map(x=>SUB[x]?.short).join(' + ')}`},true);
+  openBlock({date:r.date,start:r.start,end:r.end,subjects:b.subjects,label:`Ersatz für ${DS[dow(parse(b.date))]} ${fmtShort(b.date)},${b.time}`,replaces:b.id,replacesText:`${DAYS[dow(parse(b.date))]},${fmtShort(b.date)}, ${b.time} ·${b.subjects.map(x=>SUB[x]?.short).join(' + ')}`},true);
   window.scrollTo(0,0);
 }
 async function setCancelled(key,val){const m={...S.uniCancel};if(val)m[key]=true;else delete m[key];S.uniCancel=m;render();
@@ -692,7 +702,7 @@ function drawPip(c){const x=c.getContext('2d'),cs=getComputedStyle(document.docu
   const t=S.timer,i=phaseInfo();x.fillStyle=v('--surface');x.fillRect(0,0,c.width,c.height);
   if(!t||!i){x.fillStyle=v('--muted');x.font='600 28px sans-serif';x.textAlign='center';x.fillText('Kein Timer',c.width/2,c.height/2+10);return}
   const col=v(`--s-${t.subject}`)||v('--accent');x.fillStyle=col;x.fillRect(0,0,10,c.height);
-  x.fillStyle=v('--muted');x.font='600 22px sans-serif';x.textAlign='left';x.fillText(`${SUB[t.subject]?.short||''} · ${phaseText(i)}`,26,40);
+  x.fillStyle=v('--muted');x.font='600 22px sans-serif';x.textAlign='left';x.fillText(`${SUB[t.subject]?.short\vert{}\vert{}''} ·${phaseText(i)}`,26,40);
   x.fillStyle=v('--ink');x.font='700 92px ui-monospace,Menlo,monospace';x.fillText(`${pad(Math.floor(i.left/60))}:${pad(i.left%60)}`,24,135);
   x.fillStyle=v('--heat0');x.fillRect(26,158,c.width-52,10);x.fillStyle=i.focus?col:v('--ok');x.fillRect(26,158,(c.width-52)*i.pct/100,10)}
 async function openPip(){
@@ -701,7 +711,7 @@ async function openPip(){
     const c=document.createElement('canvas');c.width=400;c.height=190;drawPip(c);
     const v=document.createElement('video');v.muted=true;v.playsInline=true;v.className='pipsrc';v.srcObject=c.captureStream(2);document.body.appendChild(v);
     await v.play();await v.requestPictureInPicture();
-    const iv=setInterval(()=>drawPip(c),500);S.pip={v,iv};
+    const iv=setInterval(()=>drawPip(c),500);S.pip={v};
     v.addEventListener('leavepictureinpicture',()=>{clearInterval(iv);v.remove();S.pip=null;render()},{once:true});
     toast('Der Timer schwebt jetzt im eigenen Fenster. Zieh es in eine Ecke.');render();
   }catch(e){document.querySelector('video.pipsrc')?.remove();S.pip=null;
@@ -735,9 +745,8 @@ function logFormHTML(d,p){
       <label>Minuten<input id="${p}-min" type="number" min="1" max="720" step="5" value="${d.minutes||60}"></label></div>
     ${lo&&!d.sessionId?`<div class="openhint"><b>Letztes Mal offen (${fmtShort(lo.date)}):</b> ${esc(lo.open)}</div>`:''}
     <label>Was hast du geschafft?<textarea id="${p}-note" maxlength="1500" placeholder="z. B. Aufgaben 1–3 von Übungsblatt 4, Schnittgrößen verstanden">${esc(d.note||'')}</textarea></label>
-    <label>Was ist offen, was nimmst du dir nächstes Mal vor?<textarea id="${p}-open" maxlength="1000" placeholder="z. B. Aufgabe 4 hängt bei der Lagerreaktion">${esc(d.open||'')}</textarea></label>
-    ${(()=>{const cand=kindsFor(d.subject).flatMap(k=>itemsFor(d.subject,k)).filter(i=>!i.done&&i.past).slice(0,12);
-      return cand.length?`<fieldset><legend>Welche Vorlesungen und Übungen hast du bearbeitet?</legend>${cand.map(i=>`<label><input type="checkbox" id="${p}-wk-${i.key}" data-wk="${i.key}">${esc(i.title)}${i.e?` <span class="small muted">${DS[dow(parse(i.e.d))]} ${fmtShort(i.e.d)}</span>`:''}</label>`).join('')}</fieldset>`:''})()}
+    <label>Was ist offen, was nimmst du dir nächstes Mal vor?<textarea id="${p}-open" maxlength="1000" placeholder="z. B. Aufgabe 4 hängt bei der Lagerreaktion">${esc(d.open\vert{}\vert{}'')}</textarea></label>${(()=>{const cand=kindsFor(d.subject).flatMap(k=>itemsFor(d.subject,k)).filter(i=>!i.done&&i.past).slice(0,12);
+      return cand.length?`<fieldset><legend>Welche Veranstaltungen hast du bearbeitet?</legend>${cand.map(i=>`<label><input type="checkbox" id="${p}-wk-${i.key}" data-wk="${i.key}">${esc(i.title)}${i.e?` <span class="small muted">${DS[dow(parse(i.e.d))]} ${fmtShort(i.e.d)}</span>`:''}</label>`).join('')}</fieldset>`:''})()}
     ${open.length?`<fieldset><legend>Themen erledigt?</legend>${open.map(t=>`<label><input type="checkbox" id="${p}-tp-${t.id}" data-tp="${t.id}">${esc(t.t)}</label>`).join('')}</fieldset>`:''}
     <p class="small muted" style="margin:0">Schreibst du „Vorlesung 2“ oder „Übung 1–3“ ins Feld „geschafft“, bekommt das im Fach automatisch ein grünes Häkchen.</p>
     <div class="row" style="justify-content:flex-end"><button class="btn ghost" data-act="log-cancel" data-p="${p}">Abbrechen</button><button class="btn primary" data-act="save-log" data-p="${p}">Protokoll speichern</button></div>
@@ -766,7 +775,7 @@ function dialogHTML(){const d=S.dialog;if(!d)return '';
     if(!e)inner=`<h2 id="dlg-h">Termin nicht gefunden</h2><div class="row" style="justify-content:flex-end"><button class="btn" data-act="close">Schließen</button></div>`;
     else{const x=isCancelled(e),past=isPast(e);
     inner=`<h2 id="dlg-h">${esc(e.t)}</h2>
-      <p style="margin:0">${chip(e.sub)} ${esc(e.k)}${e.g?' · '+esc(e.g):''}<br><span class="muted">${fmtLong(e.d)}, ${e.s}–${e.e}${e.l?' · '+esc(e.l):''}</span></p>
+      <p style="margin:0">${chip(e.sub)} ${esc(e.k)}${e.g?' · '+esc(e.g):''}<br><span class="muted">${fmtLong(e.d)},${e.s}–${e.e}${e.l?' · '+esc(e.l):''}</span></p>
       ${x?`<div class="banner">${past?'Ist ausgefallen.':'Fällt aus.'} Der Termin zählt nicht bei Überschneidungen und Uni-Stunden.</div>`:''}
       <div class="row" style="justify-content:flex-end"><button class="btn ghost" data-act="close">Schließen</button>
         <button class="btn ${x?'':'primary'}" data-act="uni-cancel" data-key="${d.key}" data-val="${x?0:1}">${x?'Findet doch statt':past?'Ist ausgefallen':'Fällt aus'}</button></div>`}
@@ -823,8 +832,7 @@ function dialogHTML(){const d=S.dialog;if(!d)return '';
       <label>Was ist geplant?<input type="text" id="blk-label" maxlength="160" value="${esc(d.label)}" placeholder="z. B. Übungsblatt 3, Aufgaben 1–4"></label>
       ${d.isNew&&!d.replaces?`<div class="two"><label class="row" style="flex-direction:row;align-items:center;gap:8px;font-weight:400"><input type="checkbox" id="blk-repeat"> Jede Woche wiederholen</label><label>Bis <span class="muted small" style="font-weight:400">(optional)</span><input type="date" id="blk-until"></label></div>`:''}
       ${(()=>{const rid=!d.isNew&&d.id&&d.id.includes('_std_')?d.id.split('_std_')[1]:null,r=rid&&S.std[rid];return r?`<div class="openhint">Teil des Standard-Lernblocks <b>jeden ${STD_WD[r.weekday]}, ${r.start}–${r.end}</b>. Änderungen hier gelten nur für diesen Tag. <button class="linkbtn" data-act="std-edit" data-id="${rid}">Ganze Serie bearbeiten</button></div>`:''})()}
-      <label>Dein Vorhaben für diese Session<textarea id="blk-goal" maxlength="500" placeholder="Was willst du am Ende geschafft haben? z. B. Vorlesung 3 nacharbeiten und Übung 2 rechnen">${esc(d.goal||'')}</textarea></label>
-      ${c?`<div class="banner">Überschneidet sich mit ${esc(uniLabel(c))} (${c.s}–${c.e}).</div>`:''}
+      <label>Dein Vorhaben für diese Session<textarea id="blk-goal" maxlength="500" placeholder="Was willst du am Ende geschafft haben? z. B. Vorlesung 3 nacharbeiten und Übung 2 rechnen">${esc(d.goal\vert{}\vert{}'')}</textarea></label>${c?`<div class="banner">Überschneidet sich mit ${esc(uniLabel(c))} (${c.s}–${c.e}).</div>`:''}
       ${st?.status==='skipped'?`<div class="small pill-warn"><b>Als ausgefallen markiert</b></div>`:''}
       ${st&&st.status!=='skipped'?`<div class="stack" style="gap:6px"><div class="row between"><b class="small pill-ok">✓ Erledigt · ${st.minutes} min</b><button class="btn ghost" data-act="edit-session" data-id="${st.id}">Protokoll bearbeiten</button></div>${protoHTML(st)}</div>`:''}
       ${!d.isNew&&!st?`<div class="row"><button class="btn" data-act="blk-done">Erledigt eintragen</button><button class="btn ghost" data-act="blk-skip">Ausgefallen</button></div>`:''}
@@ -852,7 +860,7 @@ function blockCard(b){
   const lo=b.subjects[0]&&!st&&!inl?lastOpen(b.subjects[0]):null;
   let status='';
   if(inl)status='';
-  else if(st?.status==='skipped'){const r=replacementOf(b.id);status=r?`<span class="status pill-warn">Ausgefallen · Ersatz am ${DS[dow(parse(r.date))]} ${fmtShort(r.date)}, ${r.start}–${r.end}</span>`:`<span class="status pill-warn">Ausgefallen · noch kein Ersatztermin</span><button class="btn" data-act="replace" data-block="${b.id}">Ersatztermin festlegen</button>`}
+  else if(st?.status==='skipped'){const r=replacementOf(b.id);status=r?`<span class="status pill-warn">Ausgefallen · Ersatz am ${DS[dow(parse(r.date))]}${fmtShort(r.date)}, ${r.start}–${r.end}</span>`:`<span class="status pill-warn">Ausgefallen · noch kein Ersatztermin</span><button class="btn" data-act="replace" data-block="${b.id}">Ersatztermin festlegen</button>`}
   else if(st)status=`<span class="status pill-ok">✓ Erledigt · ${st.minutes} min</span>`;
   else if(past)status=`<span class="status pill-bad">Offen</span>`;
   const actions=inl?'':st?(st.status!=='skipped'?`<button class="btn" data-act="edit-session" data-id="${st.id}">${st.note?'Protokoll bearbeiten':'Protokoll schreiben'}</button>`:'')+`<button class="btn ghost" data-act="undo" data-id="${st.id}">Zurücksetzen</button>`
@@ -860,10 +868,9 @@ function blockCard(b){
        <button class="btn" data-act="done" data-block="${b.id}">Session beenden und protokollieren</button>
        <button class="btn ghost" data-act="skip" data-block="${b.id}">Ausgefallen</button>`;
   return `<div class="block ${st?(st.status==='skipped'?'skipped':'done'):''}" style="--c:${c}">
-    <div class="row between"><span class="time">${esc(b.time)} · ${String(b.h).replace('.',',')} h</span><span class="row">${b.subjects.map(chip).join('')}<button class="btn ghost" data-act="edit-block" data-block="${b.id}">Bearbeiten</button></span></div>
+    <div class="row between"><span class="time">${esc(b.time)} ·${String(b.h).replace('.',',')} h</span><span class="row">${b.subjects.map(chip).join('')}<button class="btn ghost" data-act="edit-block" data-block="${b.id}">Bearbeiten</button></span></div>
     <h3>${b.subjects.length?esc(b.subjects.map(s=>SUB[s].name).join(' / ')):'Fach offen'}</h3>
-    <div class="muted">${esc(b.label)}</div>
-    ${cf?`<div class="banner">Überschneidet sich mit ${esc(uniLabel(cf))} (${cf.s}–${cf.e}). Verschieb den Block im Kalender.</div>`:''}
+    <div class="muted">${esc(b.label)}</div>${cf?`<div class="banner">Überschneidet sich mit ${esc(uniLabel(cf))} (${cf.s}–${cf.e}). Verschieb den Block im Kalender.</div>`:''}
     ${lo?`<div class="openhint"><b>Offen vom ${fmtShort(lo.date)}:</b> ${esc(lo.open)}</div>`:''}
     ${!st&&!inl?goalHTML(b):''}
     ${t?timerHTML(t):''}
@@ -881,6 +888,18 @@ function viewHeute(){
   const loose=S.timer&&!S.timer.blockId&&!timerStale(S.timer)?timerInfo():null;
   const tip=TIPS[diff('2026-01-01',k)%TIPS.length];
   const pct=Math.min(100,ws.planned?ws.got/ws.planned*100:0);
+  
+  // Haushalt fällig? (Täglich falls heute nicht erledigt. Wöchentlich/Monatlich falls Zeitraum verstrichen oder falls Sonntag)
+  const dueChores = S.chores.filter(c => {
+    if (c.lastDone === k) return false;
+    if (!c.lastDone) return true;
+    const days = diff(c.lastDone, k);
+    if (c.freq === 'daily') return true;
+    if (c.freq === 'weekly') return days >= 7 || dow(parse(k)) === 6; // fällig nach 7 Tagen oder Sonntags
+    if (c.freq === 'monthly') return days >= 30;
+    return false;
+  });
+
   return `<div class="stack">
     <section class="hero">
       <div class="stack" style="gap:6px"><span class="label">KW ${isoWeek(new Date())}</span><h1>${fmtLong(k)}</h1></div>
@@ -904,6 +923,7 @@ function viewHeute(){
       if(d>=5&&!w.reviewedAt)h+=`<div class="card row between"><span><b>Zeit für deinen Wochenrückblick.</b> <span class="muted">Wo stehst du, was lief gut, was machst du anders?</span></span><button class="btn primary" data-act="go-review">Rückblick schreiben</button></div>`;
       return h})()}
     ${(()=>{const due=sortTodos(S.todos.filter(t=>!t.done&&t.due&&t.due<=todayKey()));return due.length?`<section class="card stack" style="gap:6px"><div class="row between"><h3>Fällige To-dos</h3><button class="btn ghost" data-act="go-todos">Alle To-dos</button></div><div class="list">${due.map(todoRow).join('')}</div></section>`:''})()}
+    ${dueChores.length ? `<section class="card stack" style="gap:6px"><div class="row between"><h3>Haushalt (fällig)</h3><button class="btn ghost" data-act="go-chores">Zum Haushalt</button></div><div class="list">${dueChores.map(c=>`<div class="choreitem"><button class="btn ghost small" data-act="chore-done" data-id="${c.id}">✓</button><label class="grow"><span class="ttxt"><b>${esc(c.text)}</b></span>${c.room?`<span class="chip">${esc(c.room)}</span>`:''}</label></div>`).join('')}</div></section>` : ''}
     ${(()=>{const aw=awayOn(k);if(!aw.length)return '';const a=aw[0],last=a.until||a.date;
       return `<div class="card row between awaycard"><span><b>Du bist weg${a.title?': '+esc(a.title):''}</b> <span class="muted">${last===k?'heute noch':'bis '+DAYS[dow(parse(last))]+', '+fmtShort(last)}${a.pause!==false?' · keine Lernblöcke':''}</span></span><button class="btn ghost" data-act="away-open" data-id="${a.id}">Bearbeiten</button></div>`})()}
     <section class="stack">
@@ -933,23 +953,23 @@ function viewKalender(){
     const items=layout([...uniOn(k).map(e=>({type:'uni',s:toMin(e.s),e:toMin(e.e),ev:e})),...ownOn(k).map(e=>({type:'own',s:toMin(e.s),e:toMin(e.e),ev:e})),...blocksFor(k).map(b=>({type:'learn',s:toMin(b.start),e:toMin(b.end),b}))]);
     let html='';
     items.forEach(it=>{const top=(Math.max(it.s,CAL_START)-CAL_START)*PX,h=Math.max(16,(Math.min(it.e,CAL_END)-Math.max(it.s,CAL_START))*PX);
-      const pos=`top:${top}px;height:${h}px;left:calc(${it.lane}*100%/${it.lanes} + 2px);width:calc(100%/${it.lanes} - 4px)`;
-      if(it.type==='uni'){const e=it.ev,x=isCancelled(e);html+=`<div class="ev uni ${x?'cancelled':''}" role="button" tabindex="0" data-act="uni-open" data-key="${evKey(e)}" data-date="${e.d}" style="${pos};--c:var(--s-${e.sub||'en'})" title="${esc(`${e.s}–${e.e} ${e.t} (${e.k}) ${e.g} · ${e.l}${x?' · fällt aus':''}`)}"><span class="t">${e.s}–${e.e}</span><b>${esc(uniLabel(e))}</b><span class="loc">${x?'fällt aus':esc(e.l)}</span></div>`}
+      const pos=`top:${top}px;height:${h}px;left:calc(${it.lane}*100%/${it.lanes} + 2px);width:calc(100\%/${it.lanes} - 4px)`;
+      if(it.type==='uni'){const e=it.ev,x=isCancelled(e);html+=`<div class="ev uni ${x?'cancelled':''}" role="button" tabindex="0" data-act="uni-open" data-key="${evKey(e)}" data-date="${e.d}" style="${pos};--c:var(--s-${e.sub\vert{}\vert{}'en'})" title="${esc(`${e.s}–${e.e} ${e.t} (${e.k}) ${e.g} · ${e.l}${x?' · fällt aus':''}`)}"><span class="t">${e.s}–${e.e}</span><b>${esc(uniLabel(e))}</b><span class="loc">${x?'fällt aus':esc(e.l)}</span></div>`}
       else if(it.type==='own'){const e=it.ev;html+=`<div class="ev own" role="button" tabindex="0" data-act="own-open" data-id="${e.id}" data-date="${e.d}" style="${pos}" title="${esc(`${e.s}–${e.e} ${e.t}${e.l?' · '+e.l:''}`)}"><span class="t">${e.s}–${e.e}</span><b>${esc(e.t)}</b><span class="loc">${esc(e.l)}</span></div>`}
       else{const b=it.b,st=statusOf(b),cf=conflictOf(b);
         const mark=st&&st.status!=='skipped'?'✓ ':'',names=esc(b.subjects.map(s=>SUB[s]?.short).join(' + '));
-        const tip=st&&st.status!=='skipped'?`Protokoll: ${st.note||'noch leer'}${st.open?'\nOffen: '+st.open:''}`:b.label;
-        html+=`<div class="ev learn ${st?(st.status==='skipped'?'skipped':'done'):''} ${cf?'conflict':''}" tabindex="0" role="button" aria-label="Lernblock ${esc(b.time)} ${esc(b.subjects.map(s=>SUB[s]?.short).join(' und '))}, verschieben oder bearbeiten" data-bid="${b.id}" style="${pos};--c:var(--s-${b.subjects[0]||'en'})" title="${esc(tip)}">${it.e-it.s<40?`<b>${mark}${names} ${b.start}</b>`:`<span class="t">${b.time}</span><b>${mark}${names||'Lernen'}</b><span class="loc">${esc(st&&st.status!=='skipped'&&st.note?st.note:b.label)}</span>`}<div class="res" aria-hidden="true"></div></div>`}});
+        const tip=st&&st.status!=='skipped'?`Protokoll: ${st.note\vert{}\vert{}'noch leer'}${st.open?'\nOffen: '+st.open:''}`:b.label;
+        html+=`<div class="ev learn ${st?(st.status==='skipped'?'skipped':'done'):''}${cf?'conflict':''}" tabindex="0" role="button" aria-label="Lernblock ${esc(b.time)}${esc(b.subjects.map(s=>SUB[s]?.short).join(' und '))}, verschieben oder bearbeiten" data-bid="${b.id}" style="${pos};--c:var(--s-${b.subjects[0]||'en'})" title="${esc(tip)}">${it.e-it.s<40?`<b>${mark}${names} ${b.start}</b>`:`<span class="t">${b.time}</span><b>${mark}${names||'Lernen'}</b><span class="loc">${esc(st&&st.status!=='skipped'&&st.note?st.note:b.label)}</span>`}<div class="res" aria-hidden="true"></div></div>`}});
     if(k===tk&&nowM>=CAL_START&&nowM<=CAL_END)html+=`<div class="nowline" style="top:${(nowM-CAL_START)*PX}px"></div>`;
-    cols+=`<div class="daycol ${k===tk?'today':''} ${i===6?'sun':''} ${aw.length?'away':''}" data-date="${k}" data-i="${i}" style="height:${H}px">${html}</div>`}
+    cols+=`<div class="daycol ${k===tk?'today':''} ${i===6?'sun':''}${aw.length?'away':''}" data-date="${k}" data-i="${i}" style="height:${H}px">${html}</div>`}
 
   const cleanUrl = S.calUrl ? (S.calUrl.match(/src=["']([^"']+)["']/i)?.[1] || S.calUrl).replace(/&amp;/g, '&') : '';
 
   return `<div class="stack">
-    <div class="row between"><div><span class="label">KW ${isoWeek(mon)} · Kalender</span><h1>${fmtShort(key(mon))} – ${fmtShort(key(sun))}</h1></div>
+    <div class="row between"><div><span class="label">KW ${isoWeek(mon)} · Kalender</span><h1>${fmtShort(key(mon))} –${fmtShort(key(sun))}</h1></div>
       <div class="row"><button class="btn" data-act="wk" data-d="-1" aria-label="Vorige Woche">←</button><button class="btn" data-act="wk" data-d="0">Diese Woche</button><button class="btn" data-act="wk" data-d="1" aria-label="Nächste Woche">→</button></div></div>
     <div class="card stack" style="gap:10px">
-      <div class="row between"><span><span class="label">Lernen</span> <b class="mono">${fmtH(ws.got)} von ${fmtH(ws.planned)} geplant</b></span><span class="small muted">${skippedText(ws)}</span></div><div class="bar"><i style="width:${pct}%"></i></div>
+      <div class="row between"><span><span class="label">Lernen</span> <b class="mono">${fmtH(ws.got)} von${fmtH(ws.planned)} geplant</b></span><span class="small muted">${skippedText(ws)}</span></div><div class="bar"><i style="width:${pct}%"></i></div>
       ${(()=>{const u=uniHours(key(mon),key(sun)),nx=S.uni.filter(e=>e.d>=key(mon)&&e.d<=key(sun)&&isCancelled(e)).length;return u.total?`<div class="row between" style="border-top:1px solid var(--line);padding-top:10px"><span><span class="label">Uni</span> <b class="mono">${fmtH(u.total*60)}</b></span><span class="kinds">${KINDS.filter(k=>u[k]).map(k=>`<span>${k} <b>${numH(u[k])} h</b></span>`).join('')}${nx?`<span class="pill-warn">${nx} fällt aus</span>`:''}</span></div>
       <div class="small muted">Zusammen mit dem Lernplan: <b class="mono" style="color:var(--ink)">${fmtH(u.total*60+ws.planned)}</b> in dieser Woche.</div>`:`<div class="small muted" style="border-top:1px solid var(--line);padding-top:10px">Diese Woche keine Uni-Termine.</div>`})()}
     </div>
@@ -975,563 +995,243 @@ function viewWoche(){
   const blocks=days.flatMap(k=>blocksFor(k)),planned=blocks.filter(b=>goalOf(b.id)).length;
   const sess=S.sessions.filter(s=>s.date>=mk&&s.date<=sun),dn=sess.filter(s=>s.status!=='skipped');
   const doneBlocks=blocks.filter(b=>{const x=statusOf(b);return x&&x.status!=='skipped'}).length,skipped=blocks.filter(b=>statusOf(b)?.status==='skipped').length;
-  const gm={yes:0,partly:0,no:0};dn.forEach(s=>{if(gm[s.goalMet]!=null)gm[s.goalMet]++});
-  const per=SUBJECTS.map(s=>({s,m:dn.filter(x=>x.subject===s.id).reduce((a,x)=>a+(+x.minutes||0),0)})).filter(p=>p.m);
-  const mx=Math.max(60,...per.map(p=>p.m));
+  
   const rows=days.map(k=>{const bl=blocksFor(k);if(!bl.length)return '';
     return `<div class="planday"><div class="small"><b>${DS[dow(parse(k))]} ${fmtShort(k)}</b>${k===tk?' <span class="chip">heute</span>':''}</div><div class="stack" style="gap:6px">${bl.map(b=>{const st=statusOf(b);
-      const res=st?.status==='skipped'?`<span class="small pill-warn">ausgefallen</span>`:st?`<span class="small ${GM[st.goalMet]?.[1]||'pill-ok'}">${GM[st.goalMet]?GM[st.goalMet][0].replace('Vorhaben ',''):'✓ erledigt'}</span>`:'';
+      const res=st?.status==='skipped'?`<span class="small pill-warn">ausgefallen</span>`:st?`<span class="small pill-ok">✓ erledigt</span>`:'';
       return `<div class="planrow" style="--c:var(--s-${b.subjects[0]||'en'})"><span class="mono small muted">${b.start}</span><span class="row" style="gap:4px">${b.subjects.map(chip).join('')}</span>
-        <input type="text" id="gl-${b.id}" data-act="goal-input" data-block="${b.id}" data-date="${b.date}" maxlength="500" value="${esc(goalOf(b.id))}" placeholder="${esc(b.label||'Vorhaben für diese Session')}" aria-label="Vorhaben ${DS[dow(parse(k))]} ${b.time}">${res}</div>`}).join('')}</div></div>`}).join('');
+        <input type="text" id="gl-${b.id}" data-act="goal-input" data-block="${b.id}" data-date="${b.date}" maxlength="500" value="${esc(goalOf(b.id))}" placeholder="${esc(b.label\vert{}\vert{}'Vorhaben für diese Session')}" aria-label="Vorhaben ${DS[dow(parse(k))]} ${b.time}">${res}</div>`}).join('')}</div></div>`}).join('');
+  
   return `<div class="stack">
     <div class="row between"><div><span class="label">KW ${isoWeek(mon)} · Planung und Rückblick</span><h1>Woche ${fmtShort(mk)} – ${fmtShort(sun)}</h1></div>
       <div class="row"><button class="btn" data-act="wk" data-d="-1" aria-label="Vorige Woche">←</button><button class="btn" data-act="wk" data-d="0">Diese Woche</button><button class="btn" data-act="wk" data-d="1" aria-label="Nächste Woche">→</button></div></div>
-    <section class="card stack" style="gap:14px">
-      <div class="row between"><h2>Planen</h2><span class="row"><span class="small muted">${planned} von ${blocks.length} Lernblöcken haben ein Vorhaben</span><button class="btn" data-act="std-open">Standard-Lernblöcke</button></span></div>
-      ${prev.anders?`<div class="openhint"><b>Dein Vorsatz aus dem letzten Rückblick:</b> ${esc(prev.anders)}</div>`:''}
-      <label class="field">Wochenziele: was willst du bis Sonntag geschafft haben?<textarea id="wg-${mk}" maxlength="1500" placeholder="z. B. Vorlesung 1–3 nacharbeiten, Übungsblatt 1 abgeben, 15 h lernen">${esc(w.goals||'')}</textarea></label>
-      <div class="row"><button class="btn primary" data-act="save-wg" data-mon="${mk}">Wochenziele speichern</button>${w.goals?'<span class="small pill-ok">gespeichert</span>':''}</div>
-      <div><h3 style="margin-bottom:4px">Vorhaben pro Lernblock</h3><p class="small muted" style="margin:0 0 8px">Eintragen speichert sofort. Vor der Session siehst du dein Vorhaben unter „Heute“ wieder.</p>
-        <div class="stack" style="gap:10px">${rows||'<p class="muted small" style="margin:0">In dieser Woche sind keine Lernblöcke geplant.</p>'}</div></div>
-    </section>
-    <section class="card stack" id="review" style="gap:14px">
-      <div class="row between"><h2>Rückblick</h2>${w.reviewedAt?`<span class="small pill-ok">gespeichert am ${fmtShort(w.reviewedAt)}</span>`:mk<=tk?'<span class="small muted">am besten Samstag nach dem Lernblock</span>':''}</div>
-      <div class="stats">
-        <div><span class="label">Gelernt</span><b class="mono">${fmtH(ws.got)}</b><span class="small muted">von ${fmtH(ws.planned)} geplant</span></div>
-        <div><span class="label">Lernblöcke</span><b class="mono">${doneBlocks}/${blocks.length}</b><span class="small muted">${skipped?skipped+' ausgefallen':'keiner ausgefallen'}</span></div>
-        ${(()=>{const r=dn.filter(x=>x.rating>0),avg=r.length?r.reduce((a,x)=>a+x.rating,0)/r.length:0,dist=[1,2,3,4,5].map(n=>r.filter(x=>x.rating===n).length),mx=Math.max(1,...dist);
-          return `<div><span class="label">Zufriedenheit Sessions</span><b class="mono">${r.length?'Ø '+avg.toLocaleString('de-DE',{maximumFractionDigits:1})+' / 5':'–'}</b>
-            ${r.length?`<div class="satbars" aria-label="Verteilung der Bewertungen">${dist.map((c,i)=>`<span title="${i+1}: ${c}×"><i style="height:${c/mx*100}%"></i><small>${i+1}</small></span>`).join('')}</div>`:''}
-            <span class="small muted">${r.length} von ${dn.length} Sessions bewertet</span></div>`})()}
-        <div><span class="label">Vorhaben erreicht</span><b class="mono"><span class="pill-ok">${gm.yes}</span> · <span class="pill-warn">${gm.partly}</span> · <span class="pill-bad">${gm.no}</span></b><span class="small muted">ja · teilweise · nein</span></div>
-      </div>
-      ${per.length?`<div class="stack" style="gap:6px">${per.map(p=>`<div class="hbar" style="--c:var(--s-${p.s.id})"><span class="small">${esc(p.s.short)}</span><div class="bar"><i style="width:${p.m/mx*100}%"></i></div><span class="small mono muted" style="text-align:right">${fmtH(p.m)}</span></div>`).join('')}</div>`:''}
-      ${w.goals?`<div class="goalbox"><em>Deine Wochenziele</em>${esc(w.goals)}</div>`:''}
-      <label class="field">Wo stehst du gerade?<textarea id="rf-stand-${mk}" maxlength="1500" placeholder="z. B. Mathe läuft, in Physik hänge ich bei den Übungen hinterher">${esc(w.stand||'')}</textarea></label>
-      <label class="field">Was lief gut?<textarea id="rf-gut-${mk}" maxlength="1000">${esc(w.gut||'')}</textarea></label>
-      <label class="field">Was machst du nächste Woche anders?<textarea id="rf-anders-${mk}" maxlength="1000" placeholder="Taucht nächste Woche bei der Planung wieder auf">${esc(w.anders||'')}</textarea></label>
-      <div class="row"><span class="small" style="font-weight:600">Wie zufrieden bist du mit der Woche?</span>${[1,2,3,4,5].map(n=>`<button class="rate ${w.rating===n?'on':''}" data-act="rate" data-mon="${mk}" data-n="${n}" aria-pressed="${w.rating===n}">${n}</button>`).join('')}<span class="small muted">1 = gar nicht, 5 = sehr</span></div>
-      <div class="row"><button class="btn primary" data-act="save-review" data-mon="${mk}">Rückblick speichern</button></div>
-    </section>
-  </div>`}
-
-/* ---------- To-dos ---------- */
-const todoCats=()=>[['allg','Allgemein'],['orga','Uni-Orga'],...SUBJECTS.map(s=>[s.id,s.short])];
-const catOf=t=>t.cat||'orga';
-const catName=c=>(todoCats().find(x=>x[0]===c)||[,c])[1];
-function dueInfo(t){if(!t.due||t.done)return null;const d=diff(todayKey(),t.due);
-  return d<0?{txt:`überfällig seit ${fmtShort(t.due)}`,cls:'pill-bad'}:d===0?{txt:'heute fällig',cls:'pill-warn'}:d===1?{txt:'morgen fällig',cls:'pill-warn'}:{txt:`fällig ${DS[dow(parse(t.due))]} ${fmtShort(t.due)}`,cls:'muted'}}
-const catChip=c=>SUB[c]?chip(c):`<span class="chip">${esc(catName(c))}</span>`;
-function todoRow(t){const di=dueInfo(t);
-  if(S.todoEdit===t.id)return `<div class="todo editing"><div class="todoedit">
-    <input type="text" id="te-text-${t.id}" maxlength="200" value="${esc(t.text)}" aria-label="Text">
-    <select id="te-cat-${t.id}" aria-label="Bereich">${todoCats().map(([v,l])=>`<option value="${v}" ${v===catOf(t)?'selected':''}>${esc(l)}</option>`).join('')}</select>
-    <input type="date" id="te-due-${t.id}" value="${t.due||''}" aria-label="Fällig am">
-    <span class="row"><button class="btn primary" data-act="todo-save" data-id="${t.id}">Speichern</button><button class="btn ghost" data-act="todo-cancel">Abbrechen</button></span></div></div>`;
-  return `<div class="todo ${t.done?'done':''}"><input type="checkbox" id="td-${t.id}" data-act="todo" data-id="${t.id}" ${t.done?'checked':''}>
-    <label for="td-${t.id}" class="grow"><span class="ttxt">${esc(t.text)}</span>${di?` <span class="small ${di.cls}">· ${di.txt}</span>`:''}</label>
-    ${catChip(catOf(t))}<button class="btn ghost small" data-act="todo-edit" data-id="${t.id}" aria-label="To-do bearbeiten">Bearbeiten</button><button class="xbtn" data-act="del-todo" data-id="${t.id}" aria-label="To-do löschen">×</button></div>`}
-function sortTodos(list){return [...list].sort((a,b)=>{const da=a.due||'9999',db=b.due||'9999';return da<db?-1:da>db?1:(a.order??0)-(b.order??0)})}
-function viewTodos(){
-  const f=S.todoFilter||'all';
-  const inCat=t=>f==='all'||catOf(t)===f;
-  const open=sortTodos(S.todos.filter(t=>!t.done&&inCat(t))),closed=S.todos.filter(t=>t.done&&inCat(t)).sort((a,b)=>(b.doneAt||0)-(a.doneAt||0));
-  const used=new Set(S.todos.map(catOf));
-  return `<div class="stack"><div><span class="label">Alles, was sonst noch zu erledigen ist</span><h1>To-dos</h1></div>
-    <form class="card todoform" data-form="todo2">
-      <label class="field grow">Neues To-do<input type="text" id="todo-text" maxlength="200" placeholder="z. B. Bücher aus der Bibliothek holen, Semesterbeitrag überweisen"></label>
-      <label class="field">Bereich<select id="todo-cat">${todoCats().map(([v,l])=>`<option value="${v}" ${v===(S.todoLastCat||'allg')?'selected':''}>${esc(l)}</option>`).join('')}</select></label>
-      <label class="field">Fällig am <span class="muted small" style="font-weight:400">(optional)</span><input type="date" id="todo-due"></label>
-      <button class="btn primary" type="submit">Hinzufügen</button>
-    </form>
-    <div class="filters" role="group" aria-label="Nach Bereich filtern"><button aria-pressed="${f==='all'}" data-act="tf" data-f="all">Alle</button>${todoCats().filter(([v])=>used.has(v)||v==='allg'||v==='orga').map(([v,l])=>`<button aria-pressed="${f===v}" data-act="tf" data-f="${v}">${esc(l)}</button>`).join('')}</div>
-    <section class="card stack" style="gap:6px">
-      <div class="row between"><h3>Offen</h3><span class="small muted">${open.length} ${open.length===1?'To-do':'To-dos'}</span></div>
-      <div class="list">${open.map(todoRow).join('')||`<p class="muted small" style="margin:0">Nichts offen. Schön.</p>`}</div>
-    </section>
-    ${closed.length?`<section class="card stack" style="gap:6px"><button class="linkbtn row between" data-act="td-showdone" style="text-decoration:none"><h3>Erledigt (${closed.length})</h3><span class="small muted">${S.showDone?'ausblenden':'anzeigen'}</span></button>
-      ${S.showDone?`<div class="list">${closed.map(todoRow).join('')}</div>`:''}</section>`:''}
-  </div>`}
-
-/* ---------- Haushalt ---------- */
-function viewHaushalt(){
-  const chores=[...S.chores].sort((a,b)=>(a.order??0)-(b.order??0));
-  return `<div class="stack"><div><span class="label">Organisation & Sauberkeit</span><h1>Haushalt</h1></div>
-    <form class="card choreform" data-form="chore">
-      <label class="field grow">Aufgabe<input type="text" id="chore-text" placeholder="z. B. Staubsaugen" required></label>
-      <label class="field">Turnus<select id="chore-freq"><option value="daily">Täglich</option><option value="weekly" selected>Wöchentlich</option><option value="monthly">Monatlich</option><option value="once">Einmalig</option></select></label>
-      <label class="field">Raum <span class="muted small">(optional)</span><input type="text" id="chore-room" placeholder="z. B. Küche"></label>
-      <button class="btn primary" type="submit">Hinzufügen</button>
-    </form>
-    <section class="card stack" style="gap:6px">
-      <div class="row between"><h3>Aufgaben</h3></div>
-      <div class="list">${chores.map(c=>`<div class="choreitem"><button class="btn ghost small" data-act="chore-done" data-id="${c.id}">✓</button>
-        <label class="grow"><span class="ttxt"><b>${esc(c.text)}</b></span> ${c.room?`<span class="chip">${esc(c.room)}</span>`:''} <span class="small muted">(${c.freq==='daily'?'täglich':c.freq==='weekly'?'wöchentlich':c.freq==='monthly'?'monatlich':'einmalig'})</span></label>
-        ${c.lastDone?`<span class="small muted">Zuletzt: ${fmtShort(c.lastDone)}</span>`:''}
-        <button class="xbtn" data-act="del-chore" data-id="${c.id}">×</button>
-      </div>`).join('')||'<p class="small muted" style="margin:0">Keine Aufgaben angelegt.</p>'}</div>
-    </section>
-  </div>`}
-
-/* ---------- Einkauf ---------- */
-function viewEinkauf(){
-  const shop=[...S.shopping];
-  const open=shop.filter(s=>!s.bought),bought=shop.filter(s=>s.bought);
-  return `<div class="stack"><div><span class="label">Besorgungen & Vorräte</span><h1>Einkaufsliste</h1></div>
-    <form class="card shopform" data-form="shop">
-      <label class="field grow">Artikel<input type="text" id="shop-text" placeholder="z. B. Milch" required></label>
-      <label class="field">Menge <span class="muted small">(optional)</span><input type="text" id="shop-qty" placeholder="z. B. 2L"></label>
-      <label class="field">Kategorie<select id="shop-cat"><option value="Supermarkt">Supermarkt</option><option value="Drogerie">Drogerie</option><option value="Baumarkt">Baumarkt</option><option value="Sonstiges">Sonstiges</option></select></label>
-      <button class="btn primary" type="submit">Hinzufügen</button>
-    </form>
-    <section class="card stack" style="gap:6px">
-      <div class="row between"><h3>Einkaufszettel (${open.length})</h3>${bought.length?`<button class="btn ghost small danger" data-act="clear-shop">Erledigte löschen</button>`:''}</div>
-      <div class="list">${open.map(s=>`<div class="shopitem">
-        <input type="checkbox" id="sh-${s.id}" data-act="shop-toggle" data-id="${s.id}">
-        <label for="sh-${s.id}" class="grow"><span class="stxt"><b>${esc(s.text)}</b></span> ${s.qty?`<span class="small muted">(${esc(s.qty)})</span>`:''} <span class="chip">${esc(s.cat)}</span></label>
-        <button class="xbtn" data-act="del-shop" data-id="${s.id}">×</button>
-      </div>`).join('')||'<p class="small muted" style="margin:0">Alles besorgt!</p>'}</div>
-      ${bought.length?`<h4 style="margin-top:12px">Bereits im Wagen (${bought.length})</h4><div class="list">${bought.map(s=>`<div class="shopitem bought">
-        <input type="checkbox" id="sh-${s.id}" data-act="shop-toggle" data-id="${s.id}" checked>
-        <label for="sh-${s.id}" class="grow"><span class="stxt">${esc(s.text)}</span></label>
-        <button class="xbtn" data-act="del-shop" data-id="${s.id}">×</button>
-      </div>`).join('')}</div>`:''}
-    </section>
-  </div>`}
-
-/* ---------- Protokoll ---------- */
-function viewProtokoll(){
-  const f=S.protoFilter;
-  const list=S.sessions.filter(s=>s.status!=='skipped'&&(f==='all'||s.subject===f)).sort((a,b)=>a.date<b.date?1:a.date>b.date?-1:(b.at||0)-(a.at||0));
-  const tot=list.reduce((a,s)=>a+(+s.minutes||0),0);
-  const openBy=SUBJECTS.map(s=>({s,o:lastOpen(s.id)})).filter(x=>x.o&&(f==='all'||x.s.id===f));
-  let body='',cur='';
-  list.forEach(s=>{if(s.date!==cur){cur=s.date;body+=`<h3 style="margin-top:${body?'18px':'0'}">${fmtLong(s.date)}</h3>`}
-    const b=s.blockId?findBlock(s.blockId):null;
-    const where=b?`Lernblock ${esc(b.time)}${b.date!==s.date?' am '+fmtShort(s.date):''}${b.label?' · '+esc(b.label):''}`:s.blockId?'Lernblock gelöscht':'Freie Session';
-    body+=`<div class="entry">${chip(s.subject)}<span class="small muted"><span class="mono">${s.minutes} min</span> · ${where}</span><span class="row">${b?`<button class="btn ghost" data-act="show-in-cal" data-date="${b.date}">Im Kalender</button>`:''}<button class="btn ghost" data-act="edit-session" data-id="${s.id}">Bearbeiten</button><button class="xbtn" data-act="undo" data-id="${s.id}" aria-label="Eintrag löschen">×</button></span>
-      ${s.note?`<div class="txt"><em>Geschafft</em>${esc(s.note)}</div>`:`<div class="txt muted small">Keine Notiz.</div>`}
-      ${s.open?`<div class="txt open"><em>Offen</em>${esc(s.open)}</div>`:''}
-      ${s.worked?.length?`<div class="txt worked">✓ ${esc(s.worked.join(', '))}</div>`:''}
-      ${s.rating?`<div class="txt small"><em>Zufriedenheit</em><b class="mono">${s.rating}/5</b> <span class="muted">${SAT[s.rating]}</span></div>`:''}</div>`});
-  return `<div class="stack"><div><span class="label">Was du in jeder Session geschafft hast</span><h1>Protokoll</h1></div>
-    <div class="filters" role="group" aria-label="Nach Fach filtern"><button aria-pressed="${f==='all'}" data-act="pf" data-f="all">Alle</button>${SUBJECTS.map(s=>`<button aria-pressed="${f===s.id}" data-act="pf" data-f="${s.id}">${esc(s.short)}</button>`).join('')}</div>
-    ${openBy.length?`<section class="card stack" style="gap:8px"><h3>Offene Punkte</h3><div class="list">${openBy.map(x=>`<div style="align-items:flex-start">${chip(x.s.id)}<span class="grow small" style="white-space:pre-wrap">${esc(x.o.open)}</span><span class="small muted mono">${fmtShort(x.o.date)}</span></div>`).join('')}</div></section>`:''}
-    <section class="card">
-      <div class="row between" style="margin-bottom:8px"><span class="small muted">${list.length} Sessions · ${fmtH(tot)}</span><span class="row"><button class="linkbtn small muted" data-act="extra">nachträglich eintragen</button><button class="btn primary" data-act="start-free">+ Lernsession starten</button></span></div>
-      ${body||`<p class="muted" style="margin:0">Noch keine Einträge${f!=='all'?' für '+esc(SUB[f].short):''}. Wenn du einen Lernblock als erledigt einträgst, landet hier, was du geschafft hast und was offen ist.</p>`}
-    </section></div>`}
-
-/* ---------- Vorlesungen & Übungen abhaken ---------- */
-const PLURAL={Vorlesung:'Vorlesungen','Übung':'Übungen',Seminar:'Seminare',Praktikum:'Praktika'};
-const KSH={Vorlesung:'V','Übung':'Ü',Seminar:'S',Praktikum:'P'};
-const countOf=(sid,k)=>+(S.subjects[sid]?.counts?.[k]||0);
-function kindsFor(sid){return KINDS.filter(k=>k==='Vorlesung'||k==='Übung'||countOf(sid,k)>0)}
-function itemsFor(sid,kind){const w=S.subjects[sid]?.worked||{};
-  return Array.from({length:countOf(sid,kind)},(_,i)=>{const key=KSH[kind]+(i+1);return {key,n:i+1,title:`${kind} ${i+1}`,done:!!w[key],past:true}})}
-const workProgress=(sid,kind)=>{const it=itemsFor(sid,kind);return {done:it.filter(i=>i.done).length,total:it.length}};
-function setCount(sid,kind,v){const n=Math.max(0,Math.min(60,parseInt(v,10)||0));saveSubject(sid,{counts:{...(S.subjects[sid]?.counts||{}),[kind]:n}})}
-function markWorked(sid,keys,val=true){
-  if(!keys.length)return;
-  const worked={...(S.subjects[sid]?.worked||{})};
-  keys.forEach(k=>{if(val)worked[k]=true;else delete worked[k]});
-  saveSubject(sid,{worked});
-}
-/* Erkennt „Vorlesung 1", „V1", „Übung 2–4", „Praktikum 3" im Protokolltext */
-function detectWorked(sid,text){
-  const MAP={vorlesung:'Vorlesung',vorlesungen:'Vorlesung',vl:'Vorlesung',v:'Vorlesung','übung':'Übung','übungen':'Übung',uebung:'Übung',ue:'Übung','ü':'Übung','übungsblatt':'Übung',blatt:'Übung',praktikum:'Praktikum',seminar:'Seminar'};
-  const re=/(vorlesungen|vorlesung|vl|übungsblatt|übungen|übung|uebung|blatt|praktikum|seminar|ue|ü|v)\s?(?:nr\.?\s?)?(\d{1,2})(?:\s?(?:[-–]|bis)\s?(\d{1,2}))?(?!\d)/gi;
-  const found=[];let m;
-  while((m=re.exec(text||''))){
-    const before=text[m.index-1];if(before&&/[a-zäöüß]/i.test(before))continue;
-    const kind=MAP[m[1].toLowerCase()];if(!kind)continue;
-    const a=+m[2],b=m[3]?+m[3]:a;
-    for(let n=Math.min(a,b);n<=Math.max(a,b)&&n-Math.min(a,b)<30;n++){
-      const hit=itemsFor(sid,kind).find(i=>i.n===n);if(hit&&!found.some(f=>f.key===hit.key))found.push(hit)}
-  }
-  return found;
-}
-
-/* ---------- Fächer ---------- */
-function subjectOverview(s){
-  const tk=todayKey(),since=key(addDays(new Date(),-6)),d=S.subjects[s.id]||{},topics=d.topics||[],dn=topics.filter(t=>t.done).length;
-  const mins=done().filter(x=>x.subject===s.id).reduce((a,x)=>a+(+x.minutes||0),0);
-  const wk=done().filter(x=>x.subject===s.id&&x.date>=since).reduce((a,x)=>a+(+x.minutes||0),0);
-  const left=d.examDate?diff(tk,d.examDate):null;
-  return `<div class="small muted">${[s.lp?s.lp+' LP':'',esc(s.art)].filter(Boolean).join(' · ')||'Keine Notiz'}</div>
-    <div class="row" style="gap:20px"><div><div class="label">Gesamt</div><b class="mono">${fmtH(mins)}</b></div><div><div class="label">7 Tage</div><b class="mono">${fmtH(wk)}</b></div>
-      <div><div class="label">Klausur</div><span class="row"><input type="date" id="exam-${s.id}" data-act="exam" data-s="${s.id}" value="${d.examDate||''}" min="2026-10-01" max="2027-04-30" aria-label="Klausurtermin ${esc(s.short)}">${left!=null?`<span class="small mono ${left<14?'pill-bad':left<30?'pill-warn':'muted'}">${left>=0?'in '+left+' T':'vorbei'}</span>`:''}</span></div></div>
-    <div class="stack" style="gap:8px"><span class="label">Umfang: wie viele gibt es?</span>
-      <div class="counts">${KINDS.map(k=>`<label>${PLURAL[k]}<input type="number" id="cnt-${s.id}-${KSH[k]}" data-act="count" data-s="${s.id}" data-k="${k}" min="0" max="60" value="${countOf(s.id,k)||''}" placeholder="0"></label>`).join('')}</div>
-      <div class="kinds">${kindsFor(s.id).filter(k=>countOf(s.id,k)).map(k=>{const p=workProgress(s.id,k);return `<button class="linkbtn" data-act="ftab-open" data-s="${s.id}" data-k="${k}">${PLURAL[k]} <b class="${p.done===p.total?'worked':''}">${p.done}/${p.total}</b> bearbeitet</button>`}).join('')}</div></div>
-    <div><div class="row between small"><span class="label">Themen</span><span class="mono muted">${dn}/${topics.length}</span></div>
-      ${topics.length?`<div class="bar" style="margin-top:4px"><i style="width:${dn/topics.length*100}%"></i></div>`:''}
-      <div class="list" style="margin-top:6px">${topics.map(t=>`<div class="topic ${t.done?'done':''}"><input type="checkbox" id="tp-${s.id}-${t.id}" data-act="topic" data-s="${s.id}" data-t="${t.id}" ${t.done?'checked':''}><label for="tp-${s.id}-${t.id}" class="grow small"><span>${esc(t.t)}</span></label><button class="xbtn" data-act="del-topic" data-s="${s.id}" data-t="${t.id}" aria-label="Thema löschen">×</button></div>`).join('')||`<div class="small muted">Noch keine Themen. Trag Kapitel oder Altklausuren ein, sobald du die Unterlagen hast.</div>`}</div>
-      <form class="row" data-form="topic" data-s="${s.id}" style="margin-top:8px"><input type="text" id="new-${s.id}" class="grow" maxlength="120" placeholder="Thema hinzufügen" aria-label="Neues Thema ${esc(s.short)}"><button class="btn" type="submit">Hinzufügen</button></form></div>`}
-function workListHTML(s,kind){
-  const items=itemsFor(s.id,kind),p=workProgress(s.id,kind),n=countOf(s.id,kind);
-  return `<div class="row"><label class="row small" for="cnt2-${s.id}-${KSH[kind]}" style="font-weight:600">Wie viele ${PLURAL[kind]} hat ${esc(s.short)}?</label><input type="number" id="cnt2-${s.id}-${KSH[kind]}" data-act="count" data-s="${s.id}" data-k="${kind}" min="0" max="60" value="${n||''}" placeholder="z. B. 12" style="width:90px"></div>
-    ${n?`<div class="row between"><span><b class="mono ${p.done===p.total?'worked':''}">${p.done} von ${p.total}</b> ${PLURAL[kind]} bearbeitet</span>${p.done<p.total?`<button class="btn ghost" data-act="work-next" data-s="${s.id}" data-k="${kind}">Nächste abhaken</button>`:''}</div>
-    <div class="bar" style="--c:var(--ok)"><i style="width:${p.done/p.total*100}%"></i></div>
-    <div class="wkgrid">${items.map(i=>`<label class="wkcell ${i.done?'done':''}" for="wk-${s.id}-${i.key}"><input type="checkbox" id="wk-${s.id}-${i.key}" data-act="work" data-s="${s.id}" data-key="${i.key}" ${i.done?'checked':''}>${i.done?'<span class="tick">✓</span>':''}${esc(i.title)}</label>`).join('')}</div>`
-    :`<p class="small muted" style="margin:0">Trag oben ein, wie viele ${PLURAL[kind]} ${esc(s.short)} hat. Dann erscheinen hier ${kind} 1, ${kind} 2 … zum Abhaken.</p>`}
-    <p class="small muted" style="margin:0">Tipp: Schreibst du „${kind} 1“ oder „${kind} 1–3“ in ein Protokoll zu ${esc(s.short)}, wird das hier automatisch abgehakt.</p>`}
-function viewFaecher(){
-  const sel=S.fachSel&&SUB[S.fachSel]?S.fachSel:'all';
-  const pills=`<div class="filters" role="group" aria-label="Fach wählen"><button aria-pressed="${sel==='all'}" data-act="fsel" data-s="all">Alle</button>${SUBJECTS.map(s=>`<button aria-pressed="${sel===s.id}" data-act="fsel" data-s="${s.id}">${esc(s.short)}</button>`).join('')}</div>`;
-  const head=`<div class="row between"><div><span class="label">Dein Studium</span><h1>Fächer</h1></div><button class="btn" data-act="subj-open">Fächer verwalten</button></div>`;
-  if(!SUBJECTS.length)return `<div class="stack">${head}<section class="card stack" style="gap:10px"><h3>Noch keine Fächer</h3>
-    <p class="muted" style="margin:0">Leg deine Fächer an, oder importiere deinen Stundenplan aus HISinOne. Dann schlägt die App die Fächer aus deinen Veranstaltungen vor.</p>
-    <div class="row"><button class="btn primary" data-act="subj-open">Fach anlegen</button>${icsBtn('Stundenplan importieren')}</div></section></div>`;
-  if(sel==='all')return `<div class="stack">${head}${pills}
-    <div class="grid2">${SUBJECTS.map(s=>`<section class="card stack" style="gap:12px;--c:var(--s-${s.id})">
-      <div class="row between"><span class="row"><span class="dot" style="width:12px;height:12px"></span><h2>${esc(s.name)}</h2></span><span class="row"><span class="chip">Prio ${s.prio}</span><button class="btn ghost" data-act="subj-edit" data-id="${s.id}">Bearbeiten</button><button class="btn ghost" data-act="fsel" data-s="${s.id}">Öffnen</button></span></div>
-      ${subjectOverview(s)}</section>`).join('')}</div></div>`;
-  const s=SUB[sel],kinds=kindsFor(s.id),tab=S.fachTab&&(S.fachTab==='ueber'||kinds.includes(S.fachTab))?S.fachTab:'ueber';
-  return `<div class="stack">${head}${pills}
-    <section class="card stack" style="gap:14px;--c:var(--s-${s.id})">
-      <div class="row between"><span class="row"><span class="dot" style="width:12px;height:12px"></span><h2>${esc(s.name)}</h2></span><span class="row"><span class="chip">Prio ${s.prio}</span><button class="btn ghost" data-act="subj-edit" data-id="${s.id}">Bearbeiten</button></span></div>
-      <nav class="subtabs" role="tablist"><button role="tab" aria-selected="${tab==='ueber'}" data-act="ftab" data-k="ueber">Überblick</button>${kinds.map(k=>{const p=workProgress(s.id,k);return `<button role="tab" aria-selected="${tab===k}" data-act="ftab" data-k="${k}">${PLURAL[k]} <span class="mono">${p.done}/${p.total}</span></button>`}).join('')}</nav>
-      ${tab==='ueber'?subjectOverview(s):workListHTML(s,tab)}
-    </section></div>`}
-
-/* ---------- Stundenübersicht (Semester) ---------- */
-function hoursTableHTML(per){
-  if(!S.uni.length)return `<section class="card"><h3>Stunden im Semester</h3><p class="small muted" style="margin:6px 0 0">Erscheint, sobald du deinen Stundenplan importiert hast.</p></section>`;
-  const learned=Object.fromEntries(per.map(p=>[p.s.id,p.m/60]));
-  const rows=SUBJECTS.map(s=>{const ev=S.uni.filter(e=>e.sub===s.id&&!isCancelled(e)),r={s,total:0,past:0,learn:learned[s.id]||0};KINDS.forEach(k=>r[k]=0);
-    ev.forEach(e=>{const h=evH(e);r[e.k]=(r[e.k]||0)+h;r.total+=h;if(isPast(e))r.past+=h});return r});
-  const sum={total:0,past:0,learn:0};KINDS.forEach(k=>sum[k]=0);rows.forEach(r=>{['total','past','learn',...KINDS].forEach(k=>sum[k]+=r[k])});
-  const usedKinds=KINDS.filter(k=>sum[k]);
-  const cells=r=>`${usedKinds.map(k=>`<td class="${r[k]?'':'dim'}">${numH(r[k])}</td>`).join('')}<td class="sep">${numH(r.total)}</td><td class="dim">${numH(r.past)}</td><td class="sep">${numH(r.learn)}</td><td>${numH(r.total+r.learn)}</td>`;
-  return `<section class="card stack" style="gap:10px">
-    <div class="row between"><h3>Stunden im Semester</h3><span class="small muted">Uni laut Stundenplan${S.uni.length?` (${fmtShort(S.uni[0].d)} – ${fmtShort(S.uni[S.uni.length-1].d)})`:''} und deine eingetragene Lernzeit</span></div>
-    <div class="scrollx"><table class="tbl">
-      <thead><tr><th>Fach</th>${usedKinds.map(k=>`<th>${k}</th>`).join('')}<th class="sep">Uni gesamt</th><th>davon vorbei</th><th class="sep">Selbst gelernt</th><th>Summe</th></tr></thead>
-      <tbody>${rows.map(r=>`<tr><td>${chip(r.s.id)} <span class="small">${esc(r.s.name)}</span></td>${cells(r)}</tr>`).join('')}</tbody>
-      <tfoot><tr><td>Gesamt</td>${cells(sum)}</tr></tfoot>
-    </table></div>
-    <div class="small muted">Alle Angaben in Stunden. Fächer ohne Uni-Termine zählen nur deine Lernzeit.</div>
-  </section>`}
-
-/* ---------- Semester ---------- */
-function viewSemester(){
-  const tk=todayKey(),last='2027-02-28';
-  const hs=mondayOf(parse('2026-09-21'));let cells='';const weeks=Math.ceil((diff(key(hs),last)+1)/7);
-  for(let w=0;w<weeks;w++)for(let i=0;i<7;i++){const k=key(addDays(hs,w*7+i)),m=minutesOn(k);const l=m===0?'':m<60?'l1':m<120?'l2':m<180?'l3':'l4';
-    cells+=`<i class="${l} ${k===tk?'t':''} ${k>tk?'x':''}" title="${fmtShort(k)}: ${m?fmtH(m):'nichts'}"></i>`}
-  const monthLbl=[];for(let w=0;w<weeks;w++){const d=addDays(hs,w*7);monthLbl.push(w===0||d.getMonth()!==addDays(d,-7).getMonth()?MON[d.getMonth()]:'')}
-  const all=done(),tot=all.reduce((a,s)=>a+(+s.minutes||0),0),days=new Set(all.map(s=>s.date)).size;
-  let streak=0;for(let d=new Date();;d=addDays(d,-1)){const k=key(d);if(k<'2026-09-01')break;if(dow(d)===6||FREE_DAYS.includes(k))continue;if(minutesOn(k)>0)streak++;else if(k!==tk)break}
-  const per=SUBJECTS.map(s=>({s,m:all.filter(x=>x.subject===s.id).reduce((a,x)=>a+(+x.minutes||0),0)}));const mx=Math.max(60,...per.map(p=>p.m));
-  const todos=[...S.todos].sort((a,b)=>(a.order??0)-(b.order??0));
-  return `<div class="stack"><div><span class="label">Überblick</span><h1>Semester</h1></div>
-    <div class="grid2">
-      <section class="card stack" style="gap:12px"><h3>Bisher</h3>
-        <div class="count"><div><span class="big">${fmtH(tot).replace(' h','')}</span><span class="small muted">Stunden gesamt</span></div><div><span class="big">${days}</span><span class="small muted">Lerntage</span></div><div><span class="big">${streak}</span><span class="small muted">Tage am Stück</span></div></div>
-        <div class="stack" style="gap:6px">${per.map(p=>`<div class="hbar" style="--c:var(--s-${p.s.id})"><span class="small">${esc(p.s.short)}</span><div class="bar"><i style="width:${p.m/mx*100}%"></i></div><span class="small mono muted" style="text-align:right">${fmtH(p.m)}</span></div>`).join('')}</div></section>
-      <section class="card stack" style="gap:8px"><h3>To-dos</h3>
-        ${(()=>{const o=S.todos.filter(t=>!t.done);return `<p class="small muted" style="margin:0">${o.length} offen${o.filter(t=>dueInfo(t)?.cls==='pill-bad').length?` · <span class="pill-bad">${o.filter(t=>dueInfo(t)?.cls==='pill-bad').length} überfällig</span>`:''}</p><div class="list">${sortTodos(o).slice(0,4).map(todoRow).join('')}</div>`})()}
-        <div class="row"><button class="btn" data-act="go-todos">Alle To-dos</button></div></section>
+    
+    <div class="stats">
+      <div><span class="label">Geplant</span><b>${planned}</b><span class="small muted">Lernblöcke</span></div>
+      <div><span class="label">Erledigt</span><b style="color:var(--ok)">${doneBlocks}</b><span class="small muted">Lernblöcke</span></div>
+      <div><span class="label">Ausgefallen</span><b class="pill-warn">${skipped}</b><span class="small muted">Lernblöcke</span></div>
     </div>
-    <section class="card stack" style="gap:10px">
-      <h3>Stundenplan</h3><p class="small muted" style="margin:0">Hier kannst du deinen Stundenplan aus HISinOne importieren.</p>
-      <div class="row">${icsBtn()}</div>
-    </section>
-    ${hoursTableHTML(per)}
-    <section class="card stack" style="gap:10px"><div class="row between"><h3>Lernkalender</h3><span class="small muted">Stunden pro Tag: <span class="mono">0 · &lt;1 · &lt;2 · &lt;3 · 3+</span></span></div>
-      <div class="scrollx"><div style="display:grid;grid-template-columns:24px auto;gap:6px;width:max-content">
-        <span></span><div style="display:grid;grid-auto-flow:column;grid-auto-columns:14px;gap:3px">${monthLbl.map(m=>`<span class="small muted" style="white-space:nowrap;font-size:.7rem">${m}</span>`).join('')}</div>
-        <div style="display:grid;grid-template-rows:repeat(7,14px);gap:3px">${DS.map((d,i)=>`<span class="small muted" style="font-size:.65rem;line-height:14px">${i%2===0?d:''}</span>`).join('')}</div>
-        <div class="heat">${cells}</div></div></div></section>
-  </div>`}
-
-/* ---------- Eigenständige Version: Stundenplan importieren, Daten sichern ---------- */
-/* Veranstaltungen für die Zuordnung: gleiche Titel zusammenfassen, passendes Fach erraten */
-function importTitles(ev){const by={};ev.forEach(e=>{const t=by[e.t]=by[e.t]||{title:e.t,kinds:[],n:0};t.n++;if(!t.kinds.includes(e.k))t.kinds.push(e.k)});
-  const norm=x=>x.toLowerCase().replace(/[^a-zäöüß0-9]/g,'');
-  return Object.values(by).map(t=>{const hit=SUBJECTS.find(s=>norm(s.name)===norm(t.title)||norm(t.title).includes(norm(s.name))||norm(s.name).includes(norm(t.title)));return {...t,guess:hit?hit.id:'__new'}})}
-function parseICS(txt){
-  const raw=txt.replace(/\r\n/g,'\n').replace(/\n[ \t]/g,'');
-  const P=v=>{const x=/(\d{4})(\d\d)(\d\d)(?:T(\d\d)(\d\d))?/.exec(v||'');return x?{k:`${x[1]}-${x[2]}-${x[3]}`,t:x[4]?`${x[4]}:${x[5]}`:null}:null};
-  const KIND={V:'Vorlesung','Ü':'Übung',S:'Seminar',P:'Praktikum'};
-  const out=[],re=/BEGIN:VEVENT\n([\s\S]*?)END:VEVENT/g;let m;
-  while((m=re.exec(raw))){
-    const f={};m[1].split('\n').forEach(ln=>{const i=ln.indexOf(':');if(i<0)return;const name=ln.slice(0,i).split(';')[0];(f[name]=f[name]||[]).push(ln.slice(i+1))});
-    const st=P(f.DTSTART?.[0]),en=P(f.DTEND?.[0]);if(!st||!st.t)continue;
-    const summ=(f.SUMMARY?.[0]||'').replace(/\\([,;])/g,'$1');
-    const mm=/^(\d+)-(\S)\s*(.*)$/.exec(summ);
-    const kind=mm?(KIND[mm[2]]||'Termin'):'Termin';
-    let title=mm?mm[3]:summ;const grp=(/(Gr\.? ?\d+|Gruppe \d+)/.exec(summ)||[])[1]||'';
-    title=title.replace(/^(\(Gr\. \d+\)|Mech)\s*/,'').replace(/\s*Gruppe \d+$/,'').trim();
-    const sub=null;
-    const ex=new Set();(f.EXDATE||[]).forEach(v=>v.split(',').forEach(x=>{const p=P(x.trim());if(p)ex.add(p.k)}));
-    let dates=[st.k];
-    if(f.RRULE){const rr=Object.fromEntries(f.RRULE[0].split(';').map(x=>x.split('=')));
-      if(rr.FREQ==='WEEKLY'||rr.FREQ==='DAILY'){const step=(+rr.INTERVAL||1)*(rr.FREQ==='WEEKLY'?7:1),until=rr.UNTIL?P(rr.UNTIL).k:'2027-12-31',cnt=+rr.COUNT||999;
-        dates=[];for(let d=parse(st.k),n=0;key(d)<=until&&n<cnt&&n<400;d=addDays(d,step),n++)dates.push(key(d))}}
-    const loc=(f.LOCATION?.[0]||'').replace(/\\([,;])/g,'$1');
-    dates.filter(d=>!ex.has(d)).forEach(d=>out.push({d,s:st.t,e:en?.t||hm(toMin(st.t)+90),t:title,k:kind,g:grp,l:loc,sub}));
-  }
-  return out.sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:toMin(a.s)-toMin(b.s)).slice(0,2000);
-}
-const icsBtn=(label='Stundenplan (.ics) importieren')=>`<label class="btn filebtn">${label}<input type="file" id="ics-file" accept=".ics,text/calendar"></label>`;
-
-function standaloneDialogHTML(d){
-  if(d.type==='import'){const ev=d.events,titles=importTitles(ev);
-    return `<h2 id="dlg-h">Stundenplan übernehmen</h2>
-      ${ev.length?`<p style="margin:0"><b>${ev.length} Termine</b> vom ${fmtShort(ev[0].d)} bis ${fmtShort(ev[ev.length-1].d)} aus „${esc(d.name)}“.</p>
-      <p class="small muted" style="margin:0">Ordne jede Veranstaltung einem Fach zu. Vorschlag: für jede ein eigenes Fach, Vorlesung und Übung zusammen.</p>
-      <div class="list small">${titles.map((t,i)=>`<div class="maprow"><span class="grow"><b>${esc(t.title)}</b> <span class="muted">${t.kinds.join(', ')} · ${t.n} Termine</span></span>
-        <select id="imp-${i}" aria-label="Fach für ${esc(t.title)}"><option value="__new" ${t.guess==='__new'?'selected':''}>Neues Fach anlegen</option>${SUBJECTS.map(x=>`<option value="${x.id}" ${t.guess===x.id?'selected':''}>${esc(x.name)}</option>`).join('')}<option value="">Keinem Fach zuordnen</option></select></div>`).join('')}</div>
-      <p class="small muted" style="margin:0">Das ersetzt einen vorher importierten Stundenplan. Deine Lernblöcke, Termine und Protokolle bleiben.</p>`
-      :`<p style="margin:0">In „${esc(d.name)}“ stehen keine Termine. Exportiere den Stundenplan in HISinOne als iCal-Datei (.ics) und versuch es noch einmal.</p>`}
-      <div class="row" style="justify-content:flex-end"><button class="btn ghost" data-act="close">Abbrechen</button>${ev.length?`<button class="btn primary" data-act="import-ok">Übernehmen</button>`:''}</div>`}
-  return ''}
-document.addEventListener('change',e=>{
-  if(e.target.id==='ics-file'){const file=e.target.files?.[0];if(!file)return;const r=new FileReader();
-    r.onload=()=>openDialog({type:'import',name:file.name,events:parseICS(String(r.result))});r.onerror=()=>toast('Die Datei ließ sich nicht lesen.');r.readAsText(file);e.target.value=''}
-});
-document.addEventListener('click',e=>{const a=e.target.closest('[data-act]');if(!a)return;
-  if(a.dataset.act==='import-ok'){const d=S.dialog,titles=importTitles(d.events),map={};let created=0;const ci=nextColor();
-    titles.forEach((t,i)=>{let v=document.getElementById('imp-'+i)?.value??t.guess;
-      if(v==='__new'){v='f'+Date.now().toString(36)+i;saveSubj(v,{name:t.title,short:autoShort(t.title),lp:null,prio:2,art:'',color:(ci+created)%PALETTE.length,order:Date.now()+i});created++}
-      map[t.title]=v||null});
-    const events=d.events.map(e=>({...e,sub:map[e.t]||null}));S.dialog=null;
-    S.db.doc('uni/timetable').set({events,source:d.name,importedAt:todayKey()});toast(`Stundenplan übernommen: ${events.length} Termine${created?`, ${created} Fächer angelegt`:''}`)}
-});
-/* ---------- Render ---------- */
-const TABS=[['heute','Heute'],['woche','Woche'],['kalender','Kalender'],['haushalt','Haushalt'],['einkauf','Einkauf'],['todos','To-dos'],['protokoll','Protokoll'],['faecher','Fächer'],['semester','Semester']];
-function render(){
-  if(S.drag){S.pending=true;return}
-  const act=document.activeElement,keep={};
-  document.querySelectorAll('input[id]:not([type=checkbox]):not([type=file]),textarea[id],select[id]').forEach(i=>{if(!(S.fresh&&/^(dlg|blk|inl)-/.test(i.id)))keep[i.id]=i.value});
-  document.querySelectorAll('input[type=checkbox][data-tp],input[type=checkbox][data-wk]').forEach(i=>{keep['#'+i.id]=i.checked});
-  const radios={};document.querySelectorAll('input[type=radio]:checked').forEach(r=>{radios[r.name]=r.value});
-  const focusId=act&&act.id,sel=act&&act.selectionStart;
-  const scroller=document.querySelector('.calwrap'),sx=scroller?scroller.scrollLeft:0;
-  document.querySelector('header.top').hidden=S.mini;document.body.classList.toggle('is-mini',S.mini);
-  document.getElementById('tabs').innerHTML=TABS.map(([id,l])=>`<button role="tab" aria-selected="${S.tab===id}" data-tab="${id}">${l}</button>`).join('');
-  document.getElementById('app').innerHTML=S.mini?viewMini():timerBarHTML()+({heute:viewHeute,woche:viewWoche,kalender:viewKalender,haushalt:viewHaushalt,einkauf:viewEinkauf,todos:viewTodos,protokoll:viewProtokoll,faecher:viewFaecher,semester:viewSemester}[S.tab]||viewHeute)();
-  const lay=document.getElementById('layer');lay.querySelector('.overlay')?.remove();
-  if(S.dialog)lay.insertAdjacentHTML('afterbegin',dialogHTML());
-  for(const id in keep){if(id[0]==='#'){const c=document.getElementById(id.slice(1));if(c&&!S.fresh)c.checked=keep[id];continue}
-    const el=document.getElementById(id);if(el&&!id.startsWith('exam-'))el.value=keep[id]}
-  if(!S.fresh)for(const n in radios){const r=document.querySelector(`input[type=radio][name="${n}"][value="${radios[n]}"]`);if(r)r.checked=true}
-  const sc=document.querySelector('.calwrap');if(sc)sc.scrollLeft=sx;
-  if(focusId&&!S.fresh){const el=document.getElementById(focusId);if(el){el.focus();try{if(sel!=null)el.setSelectionRange(sel,sel)}catch{}}}
+    
+    <div class="card stack">
+      <h3>Wochenplanung</h3>
+      <textarea id="week-goals" rows="4" placeholder="Was sind deine wichtigsten Ziele für diese Woche?">${esc(w.goals||'')}</textarea>
+      <div class="row"><button class="btn" data-act="save-week-goals" data-mon="${mk}">Ziele speichern</button></div>
+    </div>
+    
+    <div class="stack" style="gap:16px; margin-top:8px">${rows}</div>
+  </div>`;
 }
 
-/* ---------- Ziehen im Kalender ---------- */
-document.addEventListener('pointerdown',e=>{
-  const ev=e.target.closest('.ev.learn');if(!ev||e.button!==0)return;
-  const col=ev.closest('.daycol'),b=findBlock(ev.dataset.bid);if(!b)return;
-  S.drag={b,el:ev,mode:e.target.closest('.res')?'resize':'move',x:e.clientX,y:e.clientY,colW:col.getBoundingClientRect().width,day:+col.dataset.i,moved:false,dd:0,ns:toMin(b.start),ne:toMin(b.end)};
-  try{ev.setPointerCapture(e.pointerId)}catch{}e.preventDefault()});
-document.addEventListener('pointermove',e=>{const D=S.drag;if(!D)return;
-  const dx=e.clientX-D.x,dy=e.clientY-D.y;if(!D.moved&&Math.hypot(dx,dy)<6)return;D.moved=true;D.el.classList.add('dragging');
-  const s=toMin(D.b.start),en=toMin(D.b.end),len=en-s,dm=Math.round(dy/PX/15)*15;
-  if(D.mode==='move'){D.dd=Math.max(-D.day,Math.min(6-D.day,Math.round(dx/D.colW)));D.ns=Math.max(CAL_START,Math.min(CAL_END-len,s+dm));D.ne=D.ns+len;
-    D.el.style.transform=`translate(${D.dd*D.colW}px,${(D.ns-s)*PX}px)`}
-  else{D.ne=Math.max(s+15,Math.min(CAL_END,en+dm));D.el.style.height=(D.ne-s)*PX+'px'}
-  const t=D.el.querySelector('.t');if(t)t.textContent=`${hm(D.ns)}–${hm(D.ne)}`});
-function endDrag(cancel){const D=S.drag;if(!D)return;S.drag=null;
-  if(cancel||!D.moved){S.pending=false;if(!cancel)openBlock(D.b,false);else render();return}
-  const date=key(addDays(parse(D.b.date),D.dd));
-  saveBlock({...D.b,date,start:hm(D.ns),end:hm(D.ne)});
-  const c=conflictOf({date,start:hm(D.ns),end:hm(D.ne)});toast(c?`Verschoben, überschneidet sich aber mit ${uniLabel(c)}`:`Verschoben auf ${DS[dow(parse(date))]} ${hm(D.ns)}–${hm(D.ne)}`)}
-document.addEventListener('pointerup',()=>endDrag(false));
-document.addEventListener('pointercancel',()=>endDrag(true));
+/* ---------- Fächer (mit Praktikum & Seminar immer sichtbar) ---------- */
+function viewFaecher(){
+  if(!SUBJECTS.length) return `<div class="card"><p class="muted">Noch keine Fächer angelegt.</p><button class="btn primary" data-act="subj-new">+ Fach anlegen</button></div>`;
+  const s = SUB[S.fachSel] || SUBJECTS[0];
+  if(!s) return '';
+  
+  const tab = S.fachTab || 'ueber';
+  const topics = s.topics || [];
+  const doneTp = topics.filter(t=>t.done).length;
+  
+  return `<div class="stack">
+    <div class="tabs scrollx" role="tablist">
+      <button data-act="fach-sel" data-id="all" aria-selected="${S.fachSel==='all'}">Übersicht</button>
+      ${SUBJECTS.map(x=>`<button data-act="fach-sel" data-id="${x.id}" aria-selected="${S.fachSel===x.id}">${esc(x.short)}</button>`).join('')}
+    </div>
+    
+    ${S.fachSel==='all' ? `
+      <div class="grid2">
+        ${SUBJECTS.map(x=>`<div class="card stack" style="border-top:4px solid var(--s-${x.id}); cursor:pointer" data-act="fach-sel" data-id="${x.id}">
+          <h3>${esc(x.name)}</h3>
+          <div class="text-muted small">${x.lp?x.lp+' LP · ':''}Prio ${x.prio}</div>
+        </div>`).join('')}
+      </div>
+    ` : `
+      <div class="card stack" style="border-top:4px solid var(--s-${s.id})">
+        <div class="row between">
+          <div><h2 style="margin-bottom:4px">${esc(s.name)}</h2><span class="muted small">${s.lp?s.lp+' LP · ':''}Prio ${s.prio}</span></div>
+          <button class="btn ghost" data-act="subj-edit" data-id="${s.id}">Bearbeiten</button>
+        </div>
+        
+        <div class="subtabs" role="tablist">
+          <button role="tab" aria-selected="${tab==='ueber'}" data-act="ftab" data-t="ueber">Überblick</button>
+          <button role="tab" aria-selected="${tab==='V'}" data-act="ftab" data-t="V">Vorlesung</button>
+          <button role="tab" aria-selected="${tab==='Ü'}" data-act="ftab" data-t="Ü">Übung</button>
+          <button role="tab" aria-selected="${tab==='P'}" data-act="ftab" data-t="P">Praktikum</button>
+          <button role="tab" aria-selected="${tab==='S'}" data-act="ftab" data-t="S">Seminar</button>
+        </div>
 
-/* ---------- Klicks ---------- */
-document.addEventListener('click',e=>{
-  const tab=e.target.closest('[data-tab]');if(tab){S.tab=tab.dataset.tab;ls.set('lt-tab',S.tab);render();return}
-  const col=e.target.closest('.daycol');
-  if(col&&!e.target.closest('.ev')){if(needSubject())return;const y=e.clientY-col.getBoundingClientRect().top;const m=Math.min(CAL_END-60,CAL_START+Math.floor(y/PX/15)*15);
-    const k=col.dataset.date,g=genBlocks(k)[0];openBlock({date:k,start:hm(m),end:hm(m+60),subjects:g?[g.subjects[0]]:[defSub()].filter(Boolean),label:''},true);S.dialog.fromSlot=true;return}
-  const a=e.target.closest('[data-act]');if(!a)return;const act=a.dataset.act;
-  if(act==='close-bg'&&e.target!==a)return;
-  if(act==='uni-open'){openDialog({type:'uni',key:a.dataset.key,date:a.dataset.date});return}
-  if(act==='uni-cancel'){const v=a.dataset.val==='1';setCancelled(a.dataset.key,v);if(S.dialog?.type==='uni')S.dialog=null;render();toast(v?'Als ausgefallen markiert':'Termin findet wieder statt');return}
-  if(act==='new-own'){const k=a.dataset.date||key(addDays(mondayOf(new Date()),S.weekOff*7+(S.weekOff?0:dow(new Date()))));openOwn({date:k,start:'15:00',end:'16:00',repeat:'none'});setTimeout(()=>document.getElementById('own-title')?.focus(),30);return}
-  if(act==='new-away'){const mon=addDays(mondayOf(new Date()),S.weekOff*7);openAway({date:key(addDays(mon,4)),until:key(addDays(mon,6)),pause:true});return}
-  if(act==='away-open'){const o=S.own[a.dataset.id];if(o)openAway({id:a.dataset.id,date:o.date,until:o.until,title:o.title,pause:o.pause});return}
-  if(act==='away-save'){const d=S.dialog,g=id=>document.getElementById(id),from=g('away-from').value,to=g('away-to').value||from;
-    if(!from){toast('Trag ein, ab wann du weg bist.');return}if(to<from){toast('„Bis“ muss am oder nach „Von“ liegen.');return}
-    saveOwn(d.id||'a'+Date.now().toString(36),{type:'away',title:g('away-title').value.trim(),date:from,until:to,pause:g('away-pause').checked});
-    S.dialog=null;render();toast(`Abwesenheit eingetragen: ${fmtShort(from)}${to!==from?' – '+fmtShort(to):''}`);return}
-  if(act==='away-del'){const d=S.dialog;if(!d.armDel){d.armDel=true;render();return}delOwn(d.id);S.dialog=null;render();toast('Abwesenheit gelöscht');return}
-  if(act==='own-open'){const o=S.own[a.dataset.id];if(o)openOwn({id:a.dataset.id,occ:a.dataset.date,date:o.date,start:o.start,end:o.end,title:o.title,place:o.place,repeat:o.repeat||'none',until:o.until});return}
-  if(act==='dlg-kind'){const d=S.dialog,g=id=>document.getElementById(id)?.value;
-    const date=g('blk-date')||g('own-date')||d.date,start=g('blk-start')||g('own-start')||d.start,end=g('blk-end')||g('own-end')||d.end;
-    if(a.dataset.k==='away')openAway({date:date||d.date,until:date||d.date,pause:true,fromSlot:true});
-    else if(a.dataset.k==='own')openOwn({date,start,end,repeat:'none',fromSlot:true});
-    else{openBlock({date,start,end,subjects:d.subjects||[defSub()].filter(Boolean),label:''},true);S.dialog.fromSlot=true;render()}return}
-  if(act==='own-save'){const d=S.dialog,g=id=>document.getElementById(id).value,title=g('own-title').trim(),date=g('own-date'),start=g('own-start'),end=g('own-end');
-    if(!title){toast('Gib dem Termin einen Namen.');return}if(!date||!start||!end){toast('Trag Tag, Beginn und Ende ein.');return}
-    if(toMin(end)<=toMin(start)){toast('Das Ende muss nach dem Beginn liegen.');return}
-    const repeat=g('own-repeat'),until=repeat==='weekly'?(g('own-until')||null):null;
-    if(repeat==='weekly'&&until&&until<date){toast('„Bis“ muss nach dem ersten Termin liegen.');return}
-    const old=d.id?S.own[d.id]:null;
-    saveOwn(d.id||'t'+Date.now().toString(36),{title,date,start,end,place:g('own-place').trim(),repeat,until,skip:old?.skip||[]});
-    S.dialog=null;render();toast('Termin gespeichert');return}
-  if(act==='own-del'){const d=S.dialog;if(!d.armDel){d.armDel=true;render();return}delOwn(d.id);S.dialog=null;render();toast('Termin gelöscht');return}
-  if(act==='own-skip'){const d=S.dialog,o=S.own[d.id];if(o)saveOwn(d.id,{...o,skip:[...(o.skip||[]),d.occ]});S.dialog=null;render();toast(`Am ${fmtShort(d.occ)} entfernt`);return}
-  if(act==='close'||act==='close-bg'){S.dialog=null;render();return}
-  if(act==='save-calurl'){
-    const val=document.getElementById('calurl-input').value; 
-    S.calUrl=val; ls.set('lt-calurl',val);
-    if(S.db) try { S.db.doc('settings/calUrl').set({url:val}) } catch(e){}
-    render(); toast('Kalender-Link gespeichert!'); return
+        ${tab==='ueber' ? `
+          <div class="stack" style="margin-top:12px">
+            <label>Themen (${doneTp}/${topics.length})</label>
+            <div class="list">
+              ${topics.map(t=>`<div class="todo ${t.done?'done':''}"><input type="checkbox" data-act="tp-toggle" data-id="${s.id}" data-tid="${t.id}" ${t.done?'checked':''}><span class="grow">${esc(t.t)}</span><button class="xbtn" data-act="tp-del" data-id="${s.id}" data-tid="${t.id}">×</button></div>`).join('')}
+            </div>
+            <div class="row" style="margin-top:8px"><input type="text" id="new-tp-${s.id}" placeholder="Neues Thema..."><button class="btn" data-act="tp-add" data-id="${s.id}">Hinzufügen</button></div>
+          </div>
+        ` : `
+          <div class="stack" style="margin-top:12px">
+            <p class="muted small">Hier kannst du Notizen, To-dos oder Zusammenfassungen für die <b>${tab === 'V' ? 'Vorlesung' : tab === 'Ü' ? 'Übung' : tab === 'P' ? 'Praktika' : 'Seminare'}</b> ablegen.</p>
+            <textarea id="note-${s.id}-${tab}" rows="8" placeholder="Freitext-Notizen...">${esc((s.itemNotes||{})[tab]||'')}</textarea>
+            <div class="row"><button class="btn primary" data-act="save-note" data-id="${s.id}" data-tab="${tab}">Speichern</button></div>
+          </div>
+        `}
+      </div>
+    `}
+  </div>`;
+}
+
+/* ---------- To-dos & Alltag ---------- */
+function viewTodos() {
+  return `<div class="stack">
+    <h2>To-dos & Haushalt</h2>
+    <div class="grid2">
+      <div class="card stack">
+        <h3>To-dos</h3>
+        <div class="list">${S.todos.map(t=>`<div class="todo ${t.done?'done':''}"><input type="checkbox" data-act="todo-toggle" data-id="${t.id}" ${t.done?'checked':''}><span class="grow ttxt">${esc(t.text)}</span><button class="xbtn" data-act="todo-del" data-id="${t.id}">×</button></div>`).join('')}</div>
+        <div class="todoform" style="margin-top:8px; display:flex; gap:8px"><input type="text" id="new-todo" placeholder="Was ist zu tun?" class="grow"><button class="btn" data-act="todo-add">Add</button></div>
+      </div>
+      <div class="card stack">
+        <h3>Einkaufen</h3>
+        <div class="list">${S.shopping.map(t=>`<div class="shopitem ${t.bought?'bought':''}"><input type="checkbox" data-act="shop-toggle" data-id="${t.id}" ${t.bought?'checked':''}><span class="grow stxt">${esc(t.text)}</span><button class="xbtn" data-act="shop-del" data-id="${t.id}">×</button></div>`).join('')}</div>
+        <div class="todoform" style="margin-top:8px; display:flex; gap:8px"><input type="text" id="new-shop" placeholder="Was brauchst du?" class="grow"><button class="btn" data-act="shop-add">Add</button></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ---------- Haupt-Render-Schleife ---------- */
+function render() {
+  if(S.dbState === 'loading') return;
+  const app = document.getElementById('app');
+  const tabs = document.getElementById('tabs');
+  if (!app || !tabs) return;
+
+  const TABS = [
+    { id: 'heute', label: 'Heute' },
+    { id: 'kalender', label: 'Kalender' },
+    { id: 'woche', label: 'Woche' },
+    { id: 'faecher', label: 'Fächer' },
+    { id: 'todos', label: 'Alltag' }
+  ];
+
+  tabs.innerHTML = TABS.map(t => `<button role="tab" aria-selected="${S.tab === t.id}" data-act="tab" data-id="${t.id}">${t.label}</button>`).join('');
+
+  let html = '';
+  if (S.tab === 'heute') html = viewHeute();
+  else if (S.tab === 'kalender') html = viewKalender();
+  else if (S.tab === 'woche') html = viewWoche();
+  else if (S.tab === 'faecher') html = viewFaecher();
+  else if (S.tab === 'todos') html = viewTodos();
+  
+  app.innerHTML = (timerBarHTML() || '') + html;
+  
+  const layer = document.getElementById('layer');
+  if (layer) layer.innerHTML = dialogHTML();
+}
+
+/* ---------- Klick-Logik & Interaktionen ---------- */
+document.addEventListener('click', e => {
+  const a = e.target.closest('[data-act]');
+  if (!a) return;
+  const act = a.dataset.act;
+
+  // Navigation & Layout
+  if (act === 'tab') { S.tab = a.dataset.id; ls.set('lt-tab', S.tab); render(); window.scrollTo(0, 0); }
+  if (act === 'fach-sel') { S.fachSel = a.dataset.id; ls.set('lt-fach', S.fachSel); render(); }
+  if (act === 'ftab') { S.fachTab = a.dataset.t; render(); }
+  
+  if (act === 'close' || act === 'close-bg') { 
+    if(act==='close-bg' && e.target !== a) return; 
+    S.dialog = null; S.inline = null; render(); 
   }
-  if(act==='chore-done'){const c=S.chores.find(x=>x.id===a.dataset.id);if(c){saveChore(c.id,{lastDone:todayKey()});toast('Aufgabe erledigt!')}return}
-  if(act==='del-chore'){delChore(a.dataset.id);return}
-  if(act==='del-shop'){delShop(a.dataset.id);return}
-  if(act==='clear-shop'){S.shopping.filter(s=>s.bought).forEach(s=>delShop(s.id));toast('Erledigte gelöscht');return}
-  if(act==='timer'){if(S.timer){toast('Es läuft noch ein Timer (Leiste oben). Beende oder verwirf ihn zuerst.');window.scrollTo(0,0);if(timerShownInCard())render();return}
-    const id=a.dataset.block,b=findBlock(id);
-    if(b&&!goalOf(id)){const ta=document.getElementById('goal-'+id),v=(ta?.value||'').trim();
-      if(!v){toast('Halte zuerst kurz fest, was du in dieser Session schaffen willst.');ta?.focus();return}
-      saveGoal(id,b.date,v)}
-    S.goalEdit=null;startTimer(id,a.dataset.subj);return}
-  if(act==='save-goal'){const id=a.dataset.block,b=findBlock(id),v=(document.getElementById('goal-'+id)?.value||'').trim();
-    if(!v){toast('Schreib kurz auf, was du schaffen willst.');return}if(b){S.goalEdit=null;saveGoal(id,b.date,v);toast('Vorhaben gespeichert')}return}
-  if(act==='goal-edit'){S.goalEdit=a.dataset.block;render();setTimeout(()=>document.getElementById('goal-'+a.dataset.block)?.focus(),20);return}
-  if(act==='replace'){const b=findBlock(a.dataset.block);if(b)openReplacement(b);return}
-  if(act==='go-week'||act==='go-review'){S.tab='woche';S.weekOff=0;ls.set('lt-tab','woche');render();
-    if(act==='go-review')setTimeout(()=>document.getElementById('review')?.scrollIntoView({behavior:'smooth'}),30);else window.scrollTo(0,0);return}
-  if(act==='save-wg'){const mk=a.dataset.mon;saveWeek(mk,{goals:(document.getElementById('wg-'+mk)?.value||'').trim()});toast('Wochenziele gespeichert');return}
-  if(act==='rate'){saveWeek(a.dataset.mon,{rating:+a.dataset.n});return}
-  if(act==='save-review'){const mk=a.dataset.mon,g=n=>(document.getElementById(`rf-${n}-${mk}`)?.value||'').trim();
-    saveWeek(mk,{stand:g('stand'),gut:g('gut'),anders:g('anders'),reviewedAt:todayKey()});toast('Rückblick gespeichert');return}
-  if(act==='stop'){stopTimer();return}
-  if(act==='cancel-timer'){S.timer=null;ls.set('lt-timer',null);render();return}
-  if(act==='done'){const b=findBlock(a.dataset.block);if(b)openLog({blockId:b.id,date:b.date,subject:b.subjects[0]||defSub(),minutes:b.h*60});return}
-  if(act==='skip'){const b=findBlock(a.dataset.block);if(b)skipBlock(b);return}
-  if(act==='undo'){delSession(a.dataset.id);return}
-  if(act==='extend'){extendTimer(+a.dataset.min);return}
-  if(act==='pause'){pauseTimer();return}
-  if(act==='resume'){resumeTimer();return}
-  if(act==='mini-on'){S.mini=true;try{location.hash='mini'}catch{}render();window.scrollTo(0,0);return}
-  if(act==='mini-off'){S.mini=false;try{location.hash=''}catch{}render();return}
-  if(act==='mini-stop'){S.mini=false;try{location.hash=''}catch{}stopTimer();return}
-  if(act==='mini-start'){S.mini=false;try{location.hash=''}catch{}S.tab='heute';render();document.querySelector('[data-act="start-free"]')?.click();return}
-  if(act==='pip'){openPip();return}
-  if(act==='start-free'){if(needSubject())return;if(S.timer){toast('Es läuft noch ein Timer. Beende oder verwirf ihn zuerst.');window.scrollTo(0,0);return}
-    const nb=blocksFor(todayKey()).find(b=>!statusOf(b)&&toMin(b.end)>new Date().getHours()*60+new Date().getMinutes());
-    openDialog({type:'start',subject:nb?.subjects[0]||defSub()});setTimeout(()=>document.getElementById('st-goal')?.focus(),30);return}
-  if(act==='start-go'){const subject=document.getElementById('st-subj').value,goal=document.getElementById('st-goal').value.trim();
-    if(!goal){toast('Halte kurz fest, was du in dieser Session schaffen willst.');document.getElementById('st-goal').focus();return}
-    S.dialog=null;S.timer={start:Date.now(),blockId:null,subject,goal};ls.set('lt-timer',JSON.stringify(S.timer));
-    S.tab='heute';ls.set('lt-tab','heute');render();window.scrollTo(0,0);toast('Los geht’s: 25 Minuten Fokus');return}
-  if(act==='extra'){if(needSubject())return;const k=todayKey();const b=blocksFor(k)[0];openLog({blockId:null,date:k,subject:b?.subjects[0]||defSub(),minutes:50});return}
-  if(act==='edit-session'){const s=S.sessions.find(x=>x.id===a.dataset.id);if(s)openLog({sessionId:s.id,blockId:s.blockId,date:s.date,subject:s.subject,minutes:s.minutes,note:s.note,open:s.open,goal:s.goal,goalMet:s.goalMet,rating:s.rating});return}
-  if(act==='edit-block'){const b=findBlock(a.dataset.block);if(b)openBlock(b,false);return}
-  if(act==='std-open'||act==='std-new'){if(needSubject())return;openDialog({type:'std'});return}
-  if(act==='std-edit'){openDialog({type:'std',editId:a.dataset.id});return}
-  if(act==='std-end'){const d=S.dialog;if(d.armEnd!==a.dataset.id){d.armEnd=a.dataset.id;render();return}endStd(a.dataset.id);d.armEnd=null;render();toast('Standard-Lernblock beendet. Vergangene Termine und Protokolle bleiben.');return}
-  if(act==='std-save'){const d=S.dialog,g=id=>document.getElementById(id).value,start=g('std-start'),end=g('std-end'),from=g('std-from'),until=g('std-until')||null;
-    if(!start||!end||!from){toast('Trag Beginn, Ende und „Ab“ ein.');return}
-    if(toMin(end)<=toMin(start)){toast('Das Ende muss nach dem Beginn liegen.');return}
-    if(until&&until<from){toast('„Bis“ muss nach „Ab“ liegen.');return}
-    const wd=+g('std-wd'),rid=d.editId||'s'+Date.now().toString(36);
-    saveStd(rid,{weekday:wd,start,end,subjects:[...new Set([g('std-s1'),g('std-s2')].filter(Boolean))],label:g('std-label').trim(),from,until});
-    openDialog({type:'std'});toast(d.editId?'Gespeichert':`Angelegt: jeden ${STD_WD[wd]}, ${start}–${end}`);return}
-  if(act==='new-block'){if(needSubject())return;const k=key(addDays(mondayOf(new Date()),S.weekOff*7+Math.min(5,S.weekOff?0:dow(new Date()))));openBlock({date:k,start:'10:00',end:'11:00',subjects:[defSub()].filter(Boolean),label:''},true);return}
-  if(act==='save-log'){const p=a.dataset.p||'dlg',d=p==='inl'?S.inline:S.dialog;if(!d)return;
-    const $=n=>document.getElementById(`${p}-${n}`),m=Math.round(+$('min').value);
-    if(!(m>0)){toast('Trag die Minuten ein, die du gelernt hast.');return}
-    const subject=$('subj').value,note=$('note').value.trim(),open=$('open').value.trim();
-    const form=a.closest('.logform');
-    const ticked=[...form.querySelectorAll('[data-tp]')].filter(x=>x.checked).map(x=>x.dataset.tp);
-    const all=kindsFor(subject).flatMap(k=>itemsFor(subject,k)),byKey=Object.fromEntries(all.map(i=>[i.key,i]));
-    const wkKeys=[...new Set([...[...form.querySelectorAll('[data-wk]')].filter(x=>x.checked).map(x=>x.dataset.wk),...detectWorked(subject,note).map(i=>i.key)])].filter(k=>byKey[k]);
-    const existing=d.sessionId||(d.blockId&&S.sessions.find(s=>s.blockId===d.blockId&&s.status!=='skipped')?.id);
-    const prev=existing?(S.sessions.find(s=>s.id===existing)?.worked||[]):[];
-    const worked=[...new Set([...prev,...wkKeys.map(k=>byKey[k].title)])];
-    const goal=d.goal||(d.blockId?goalOf(d.blockId):''),goalMet=form.querySelector(`input[name="${p}-gm"]:checked`)?.value||'';
-    const rating=+(form.querySelector(`input[name="${p}-sat"]:checked`)?.value||0);
-    if(existing)updateSession(existing,{subject,minutes:m,note,open,worked,goal,goalMet,rating});
-    else addSession({date:d.date,blockId:d.blockId||null,subject,minutes:m,note,open,worked,goal,goalMet,rating,status:'done'});
-    markWorked(subject,wkKeys);
-    if(ticked.length)saveSubject(subject,{topics:(S.subjects[subject]?.topics||[]).map(t=>({...t,done:t.done||ticked.includes(t.id)}))});
-    if(p==='inl')S.inline=null;else S.dialog=null;
-    render();toast(wkKeys.length?`Protokoll gespeichert · ✓ ${wkKeys.map(k=>byKey[k].title).join(', ')}`:note?'Protokoll gespeichert':'Gespeichert. Das Protokoll kannst du später noch ergänzen.');return}
-  if(act==='tf'){S.todoFilter=a.dataset.f;render();return}
-  if(act==='todo-edit'){S.todoEdit=a.dataset.id;render();setTimeout(()=>{const i=document.getElementById('te-text-'+a.dataset.id);if(i){i.focus();i.setSelectionRange(i.value.length,i.value.length)}},20);return}
-  if(act==='todo-cancel'){S.todoEdit=null;render();return}
-  if(act==='todo-save'){const id=a.dataset.id,g=n=>document.getElementById(`te-${n}-${id}`),text=g('text').value.trim();
-    if(!text){toast('Das To-do braucht einen Text. Zum Löschen tipp auf ×.');return}
-    S.todoEdit=null;saveTodo(id,{text,cat:g('cat').value,due:g('due').value||null});toast('To-do geändert');return}
-  if(act==='td-showdone'){S.showDone=!S.showDone;render();return}
-  if(act==='go-todos'){S.tab='todos';ls.set('lt-tab','todos');render();window.scrollTo(0,0);return}
-  if(act==='fsel'){S.fachSel=a.dataset.s;S.fachTab='ueber';ls.set('lt-fach',S.fachSel);render();window.scrollTo(0,0);return}
-  if(act==='ftab'){S.fachTab=a.dataset.k;render();return}
-  if(act==='work-next'){const nx=itemsFor(a.dataset.s,a.dataset.k).find(i=>!i.done);if(nx){markWorked(a.dataset.s,[nx.key]);toast(`✓ ${nx.title}`)}return}
-  if(act==='ftab-open'){S.fachSel=a.dataset.s;S.fachTab=a.dataset.k;ls.set('lt-fach',S.fachSel);render();window.scrollTo(0,0);return}
-  if(act==='del-item'){const s=a.dataset.s;saveSubject(s,{items:(S.subjects[s]?.items||[]).filter(i=>i.id!==a.dataset.id).map(i=>({...i}))});return}
-  if(act==='log-cancel'){if(a.dataset.p==='inl')S.inline=null;else S.dialog=null;render();return}
-  if(act==='show-in-cal'){S.weekOff=weekOffOf(a.dataset.date);S.tab='kalender';ls.set('lt-tab',S.tab);render();window.scrollTo(0,0);return}
-  if(act==='save-block'){const d=S.dialog,date=document.getElementById('blk-date').value,start=document.getElementById('blk-start').value,end=document.getElementById('blk-end').value;
-    if(!date||!start||!end){toast('Trag Tag, Beginn und Ende ein.');return}
-    if(toMin(end)<=toMin(start)){toast('Das Ende muss nach dem Beginn liegen.');return}
-    const s1=document.getElementById('blk-s1').value,s2=document.getElementById('blk-s2').value;
-    if(d.isNew&&!d.replaces&&document.getElementById('blk-repeat')?.checked){
-      const rid='s'+Date.now().toString(36),until=document.getElementById('blk-until').value||null;
-      if(until&&until<date){toast('„Bis“ muss nach dem ersten Termin liegen.');return}
-      saveStd(rid,{weekday:dow(parse(date)),start,end,subjects:[...new Set([s1,s2].filter(Boolean))],label:document.getElementById('blk-label').value.trim(),from:date,until});
-      saveGoal(date+'_std_'+rid,date,document.getElementById('blk-goal').value);
-      S.dialog=null;render();toast(`Standard-Lernblock angelegt: jeden ${STD_WD[dow(parse(date))]}, ${start}–${end}`);return}
-    const nid=d.id||'c'+Date.now().toString(36);
-    saveBlock({id:nid,date,start,end,subjects:[...new Set([s1,s2].filter(Boolean))],label:document.getElementById('blk-label').value.trim(),custom:d.custom,replaces:d.replaces||(S.ov[nid]?.replaces)||null});
-    saveGoal(nid,date,document.getElementById('blk-goal').value);
-    const wasRepl=d.replaces&&d.isNew;S.dialog=null;render();toast(wasRepl?`Ersatztermin steht: ${DS[dow(parse(date))]} ${fmtShort(date)}, ${start}–${end}`:'Lernblock gespeichert');return}
-  if(act==='blk-del'){const d=S.dialog;if(!d.armDel){d.armDel=true;render();return}
-    if(d.custom)removeOverride(d.id);else{const b=findBlock(d.id);saveBlock({...(b||d),id:d.id,deleted:true})}
-    S.dialog=null;render();toast('Lernblock gelöscht');return}
-  if(act==='blk-reset'){removeOverride(S.dialog.id);S.dialog=null;render();toast('Wieder wie im Plan');return}
-  if(act==='blk-done'){const b=findBlock(S.dialog.id);if(b)openLog({blockId:b.id,date:b.date,subject:b.subjects[0]||defSub(),minutes:b.h*60});return}
-  if(act==='blk-skip'){const b=findBlock(S.dialog.id);S.dialog=null;if(b)skipBlock(b);else render();return}
-  if(act==='wk'){S.weekOff=a.dataset.d==='0'?0:S.weekOff+ +a.dataset.d;render();return}
-  if(act==='pf'){S.protoFilter=a.dataset.f;render();return}
-  if(act==='del-topic'){const s=a.dataset.s;saveSubject(s,{topics:(S.subjects[s]?.topics||[]).filter(t=>t.id!==a.dataset.t)});return}
-  if(act==='del-todo'){delTodo(a.dataset.id);return}
-});
-document.addEventListener('change',e=>{
-  if(e.target.id==='away-from'||e.target.id==='away-to'){const d=S.dialog;if(d?.type==='away'){d.date=document.getElementById('away-from').value;d.until=document.getElementById('away-to').value||d.date;d.title=document.getElementById('away-title').value;d.pause=document.getElementById('away-pause').checked;render()}return}
-  const a=e.target.closest('[data-act]');if(!a)return;
-  if(a.dataset.act==='shop-toggle'){const item=S.shopping.find(s=>s.id===a.dataset.id);if(item)saveShop(item.id,{bought:a.checked});return}
-  if(a.dataset.act==='log-subj'){const d=a.dataset.p==='inl'?S.inline:S.dialog;if(d){d.subject=a.value;render()}return}
-  if(a.dataset.act==='work'){markWorked(a.dataset.s,[a.dataset.key],a.checked);return}
-  if(a.dataset.act==='goal-input'){saveGoal(a.dataset.block,a.dataset.date,a.value);return}
-  if(a.dataset.act==='count'){setCount(a.dataset.s,a.dataset.k,a.value);return}
-  if(a.dataset.act==='topic'){const s=a.dataset.s;saveSubject(s,{topics:(S.subjects[s]?.topics||[]).map(t=>t.id===a.dataset.t?{...t,done:a.checked}:{...t})})}
-  if(a.dataset.act==='exam'){saveSubject(a.dataset.s,{examDate:a.value||null})}
-  if(a.dataset.act==='todo'){saveTodo(a.dataset.id,{done:a.checked,doneAt:a.checked?Date.now():null})}
-});
-document.addEventListener('submit',e=>{
-  const f=e.target.closest('[data-form]');if(!f)return;e.preventDefault();
-  const inp=f.querySelector('input[type=text]'),v=inp.value.trim();if(!v)return;
-  if(f.dataset.form==='topic'){inp.value='';const s=f.dataset.s;saveSubject(s,{topics:[...(S.subjects[s]?.topics||[]).map(t=>({...t})),{id:Date.now().toString(36),t:v,done:false}]})}
-  if(f.dataset.form==='item'){inp.value='';const s=f.dataset.s;saveSubject(s,{items:[...(S.subjects[s]?.items||[]).map(i=>({...i})),{id:Date.now().toString(36),k:f.dataset.k,t:v,done:false}]})}
-  if(f.dataset.form==='todo'){inp.value='';saveTodo(null,{text:v,done:false,order:Date.now()})}
-  if(f.dataset.form==='todo2'){const cat=document.getElementById('todo-cat').value,due=document.getElementById('todo-due').value||null;S.todoLastCat=cat;
-    saveTodo(null,{text:v,done:false,order:Date.now(),cat,due});document.getElementById('todo-due').value='';toast('To-do hinzugefügt')}
-  if(f.dataset.form==='chore'){const freq=document.getElementById('chore-freq').value,room=document.getElementById('chore-room').value.trim();
-    saveChore(null,{text:v,freq,room,lastDone:null,order:Date.now()});inp.value='';document.getElementById('chore-room').value='';toast('Haushaltsaufgabe hinzugefügt')}
-  if(f.dataset.form==='shop'){const qty=document.getElementById('shop-qty').value.trim(),cat=document.getElementById('shop-cat').value;
-    saveShop(null,{text:v,qty,cat,bought:false,order:Date.now()});inp.value='';document.getElementById('shop-qty').value='';toast('Zum Einkaufszettel hinzugefügt')}
-});
-document.addEventListener('keydown',e=>{
-  if(e.key==='Escape'&&S.dialog){S.dialog=null;render();return}
-  if(e.key==='Escape'&&S.todoEdit){S.todoEdit=null;render();return}
-  if(e.key==='Enter'&&e.target.id?.startsWith('te-text-')){e.preventDefault();e.target.closest('.todo')?.querySelector('[data-act="todo-save"]')?.click();return}
-  if(e.key==='Enter'&&e.target.matches?.('.ev.uni,.ev.own')){e.target.click();return}
-  if(e.key==='Enter'&&e.target.matches?.('.ev.learn')){const b=findBlock(e.target.dataset.bid);if(b)openBlock(b,false);return}
-  if(e.key==='Enter'&&e.target.tagName==='INPUT'&&/^(dlg|blk|inl)-/.test(e.target.id)){e.preventDefault();e.target.closest('.dialog,.logform')?.querySelector('[data-act="save-log"],[data-act="save-block"]')?.click()}});
+  if (act === 'theme') {
+    const root = document.documentElement;
+    const cur = root.getAttribute('data-theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    const nxt = cur === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', nxt);
+    ls.set('lt-theme', nxt);
+  }
+  
+  // Wochenziele
+  if (act === 'save-week-goals') {
+    const val = document.getElementById('week-goals').value;
+    saveWeek(a.dataset.mon, {goals: val});
+    toast('Wochenziele gespeichert');
+  }
 
-render();
-setInterval(()=>{if(!S.dialog&&!S.drag&&!document.activeElement?.matches('input,select,textarea'))render()},60000);
+  // Kalender Navigation
+  if (act === 'wk') { S.weekOff = a.dataset.d === '0' ? 0 : S.weekOff + parseInt(a.dataset.d); render(); }
+
+  // Todos & Einkaufen
+  if (act === 'todo-add') {
+    const el = document.getElementById('new-todo');
+    if(el.value.trim()) { saveTodo(null, {text: el.value.trim(), done: false}); el.value = ''; }
+  }
+  if (act === 'todo-toggle') {
+    const t = S.todos.find(x=>x.id===a.dataset.id);
+    if(t) saveTodo(t.id, {done: !t.done});
+  }
+  if (act === 'todo-del') delTodo(a.dataset.id);
+
+  if (act === 'shop-add') {
+    const el = document.getElementById('new-shop');
+    if(el.value.trim()) { saveShop(null, {text: el.value.trim(), bought: false}); el.value = ''; }
+  }
+  if (act === 'shop-toggle') {
+    const t = S.shopping.find(x=>x.id===a.dataset.id);
+    if(t) saveShop(t.id, {bought: !t.bought});
+  }
+  if (act === 'shop-del') delShop(a.dataset.id);
+
+  // Fächer & Themen
+  if (act === 'tp-add') {
+    const el = document.getElementById('new-tp-'+a.dataset.id);
+    if(el && el.value.trim()){
+      const s = S.subjects[a.dataset.id] || {};
+      const topics = s.topics || [];
+      topics.push({id: 't'+Date.now(), t: el.value.trim(), done: false});
+      saveSubject(a.dataset.id, {topics});
+      el.value = '';
+    }
+  }
+  if (act === 'tp-toggle') {
+    const s = S.subjects[a.dataset.id];
+    if(s) {
+      const topics = s.topics.map(t => t.id === a.dataset.tid ? {...t, done: !t.done} : t);
+      saveSubject(a.dataset.id, {topics});
+    }
+  }
+  if (act === 'tp-del') {
+    const s = S.subjects[a.dataset.id];
+    if(s) {
+      const topics = s.topics.filter(t => t.id !== a.dataset.tid);
+      saveSubject(a.dataset.id, {topics});
+    }
+  }
+  if (act === 'save-note') {
+    const s = S.subjects[a.dataset.id];
+    const el = document.getElementById(`note-${a.dataset.id}-${a.dataset.tab}`);
+    if(s && el) {
+      const itemNotes = s.itemNotes || {};
+      itemNotes[a.dataset.tab] = el.value;
+      saveSubject(a.dataset.id, {itemNotes});
+      toast('Notiz gespeichert');
+    }
+  }
+});
+
+// Event Listener für Textfelder der Lernblock-Vorhaben
+document.addEventListener('change', e => {
+  if(e.target.dataset.act === 'goal-input') {
+    saveGoal(e.target.dataset.block, e.target.dataset.date, e.target.value);
+    toast('Vorhaben gespeichert');
+  }
+});
+
+// Init
+window.addEventListener('hashchange', () => { S.mini = location.hash === '#mini'; render(); });
+// Manueller Fallback, falls DB nicht rechtzeitig lädt
+if(S.dbState !== 'loading') render();
 
 </script>
 </body>
